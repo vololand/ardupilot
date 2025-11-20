@@ -15,6 +15,8 @@ extern const AP_HAL::HAL& hal;
 // update mount position - should be called periodically
 void AP_Mount_SToRM32::update()
 {
+    AP_Mount_Backend::update();
+
     // exit immediately if not initialised
     if (!_initialised) {
         find_gimbal();
@@ -110,8 +112,8 @@ void AP_Mount_SToRM32::find_gimbal()
         return;
     }
 
-    // return if search time has has passed
-    if (AP_HAL::millis() > AP_MOUNT_STORM32_SEARCH_MS) {
+    // search for gimbal for 60 seconds or until armed
+    if ((AP_HAL::millis() > AP_MOUNT_STORM32_SEARCH_MS) && hal.util->get_soft_armed()) {
         return;
     }
 

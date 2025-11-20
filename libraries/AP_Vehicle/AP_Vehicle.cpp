@@ -12,7 +12,6 @@
 #include <AP_Logger/AP_Logger.h>
 #include <AP_Mission/AP_Mission.h>
 #include <AP_OSD/AP_OSD.h>
-#include <AP_RPM/AP_RPM.h>
 #include <SRV_Channel/SRV_Channel.h>
 #include <AP_Motors/AP_Motors.h>
 #include <AR_Motors/AP_MotorsUGV.h>
@@ -284,6 +283,12 @@ const AP_Param::GroupInfo AP_Vehicle::var_info[] = {
     AP_SUBGROUPINFO(serial_manager, "SERIAL", 31, AP_Vehicle, AP_SerialManager),
 #endif
 
+#if AP_RPM_ENABLED
+    // @Group: RPM
+    // @Path: ../AP_RPM/AP_RPM.cpp
+    AP_SUBGROUPINFO(rpm_sensor, "RPM", 32, AP_Vehicle, AP_RPM),
+#endif
+
     AP_GROUPEND
 };
 
@@ -368,10 +373,6 @@ void AP_Vehicle::setup()
     gcs().setup_console();
 #endif
 
-#if AP_NETWORKING_ENABLED
-    networking.init();
-#endif
-
 #if AP_SCRIPTING_ENABLED
 #if AP_SCRIPTING_SERIALDEVICE_ENABLED
     // must be done now so ports are registered and drivers get set up properly
@@ -380,15 +381,14 @@ void AP_Vehicle::setup()
 #endif
 #endif
 
+#if AP_NETWORKING_ENABLED
+    networking.init();
+#endif
+
 #if AP_SCHEDULER_ENABLED
     // Register scheduler_delay_cb, which will run anytime you have
     // more than 5ms remaining in your call to hal.scheduler->delay
     hal.scheduler->register_delay_callback(scheduler_delay_callback, 5);
-#endif
-
-#if HAL_MSP_ENABLED
-    // call MSP init before init_ardupilot to allow for MSP sensors
-    msp.init();
 #endif
 
 #if AP_EXTERNAL_AHRS_ENABLED
@@ -409,6 +409,11 @@ void AP_Vehicle::setup()
 
 #if HAL_CANMANAGER_ENABLED
     can_mgr.init();
+#endif
+
+#if HAL_MSP_ENABLED
+    // call MSP init before init_ardupilot to allow for MSP sensors
+    msp.init();
 #endif
 
 #if HAL_LOGGING_ENABLED
@@ -520,6 +525,10 @@ void AP_Vehicle::setup()
     for (uint8_t i = 0; i<ESC_TELEM_MAX_ESCS; i++) {
         esc_noise[i].set_cutoff_frequency(2);
     }
+#endif
+
+#if AP_RPM_ENABLED
+    rpm_sensor.init();
 #endif
 
     // invalidate count in case an enable parameter changed during
@@ -645,6 +654,9 @@ const AP_Scheduler::Task AP_Vehicle::scheduler_tasks[] = {
 #endif
 #if AP_NETWORKING_ENABLED
     SCHED_TASK_CLASS(AP_Networking, &vehicle.networking,    update,                   10,  50, 238),
+#endif
+#if AP_RPM_ENABLED
+    SCHED_TASK_CLASS(AP_RPM, &vehicle.rpm_sensor, update,                             50, 100, 239),
 #endif
 #if OSD_ENABLED
     SCHED_TASK(publish_osd_info, 1, 10, 240),
@@ -844,10 +856,9 @@ void AP_Vehicle::update_dynamic_notch(AP_InertialSensor::HarmonicNotch &notch)
 #if AP_RPM_ENABLED
         case HarmonicNotchDynamicMode::UpdateRPM: // rpm sensor based tracking
         case HarmonicNotchDynamicMode::UpdateRPM2: {
-            const auto *rpm_sensor = AP::rpm();
             uint8_t sensor = (notch.params.tracking_mode()==HarmonicNotchDynamicMode::UpdateRPM?0:1);
             float rpm;
-            if (rpm_sensor != nullptr && rpm_sensor->get_rpm(sensor, rpm)) {
+            if (rpm_sensor.get_rpm(sensor, rpm)) {
                 // set the harmonic notch filter frequency from the main rotor rpm
                 notch.update_freq_hz(rpm * ref * (1.0/60));
             } else {
@@ -995,8 +1006,8 @@ void AP_Vehicle::publish_osd_info()
 void AP_Vehicle::get_osd_roll_pitch_rad(float &roll, float &pitch) const
 {
 #if AP_AHRS_ENABLED
-    roll = ahrs.get_roll();
-    pitch = ahrs.get_pitch();
+    roll = ahrs.get_roll_rad();
+    pitch = ahrs.get_pitch_rad();
 #else
     roll = 0.0;
     pitch = 0.0;

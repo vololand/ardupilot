@@ -22,6 +22,7 @@
 #include "SITL_State_common.h"
 
 #include <SITL/SIM_RF_Ainstein_LR_D1.h>
+#include <SITL/SIM_RF_Ainstein_LR_D1_v19.h>
 #include <SITL/SIM_RF_Benewake_TF02.h>
 #include <SITL/SIM_RF_Benewake_TF03.h>
 #include <SITL/SIM_RF_Benewake_TFmini.h>
@@ -49,6 +50,7 @@ static const struct {
     SITL::SerialRangeFinder *(*createfn)();
 }  serial_rangefinder_definitions[] {
     { "ainsteinlrd1", SITL::RF_Ainstein_LR_D1::create },
+    { "ainsteinlrd1_v19", SITL::RF_Ainstein_LR_D1_v19::create },
     { "benewake_tf02", SITL::RF_Benewake_TF02::create },
     { "benewake_tf03", SITL::RF_Benewake_TF03::create },
     { "benewake_tfmini", SITL::RF_Benewake_TFmini::create },
@@ -98,7 +100,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         vicon = NEW_NOTHROW SITL::Vicon();
         return vicon;
 #endif
-#if HAL_SIM_ADSB_ENABLED
+#if AP_SIM_ADSB_ENABLED
     } else if (streq(name, "adsb")) {
         // ADSB is a stand-out as it is the only serial device which
         // will cope with begin() being called multiple times on a
@@ -108,7 +110,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         }
         sitl_model->set_adsb(adsb);
         return adsb;
-#endif
+#endif  // AP_SIM_ADSB_ENABLED
     } else if (streq(name, "frsky-d")) {
         if (frsky_d != nullptr) {
             AP_HAL::panic("Only one frsky_d at a time");
@@ -144,7 +146,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         ld06 = NEW_NOTHROW SITL::PS_LD06();
         return ld06;
 #endif  // AP_SIM_PS_LD06_ENABLED
-#if HAL_SIM_PS_RPLIDARA2_ENABLED
+#if AP_SIM_PS_RPLIDARA2_ENABLED
     } else if (streq(name, "rplidara2")) {
         if (rplidara2 != nullptr) {
             AP_HAL::panic("Only one rplidara2 at a time");
@@ -152,7 +154,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         rplidara2 = NEW_NOTHROW SITL::PS_RPLidarA2();
         return rplidara2;
 #endif
-#if HAL_SIM_PS_RPLIDARA1_ENABLED
+#if AP_SIM_PS_RPLIDARA1_ENABLED
     } else if (streq(name, "rplidara1")) {
         if (rplidara1 != nullptr) {
             AP_HAL::panic("Only one rplidara1 at a time");
@@ -160,7 +162,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         rplidara1 = NEW_NOTHROW SITL::PS_RPLidarA1();
         return rplidara1;
 #endif
-#if HAL_SIM_PS_TERARANGERTOWER_ENABLED
+#if AP_SIM_PS_TERARANGERTOWER_ENABLED
     } else if (streq(name, "terarangertower")) {
         if (terarangertower != nullptr) {
             AP_HAL::panic("Only one terarangertower at a time");
@@ -168,7 +170,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         terarangertower = NEW_NOTHROW SITL::PS_TeraRangerTower();
         return terarangertower;
 #endif
-#if HAL_SIM_PS_LIGHTWARE_SF45B_ENABLED
+#if AP_SIM_PS_LIGHTWARE_SF45B_ENABLED
     } else if (streq(name, "sf45b")) {
         if (sf45b != nullptr) {
             AP_HAL::panic("Only one sf45b at a time");
@@ -248,13 +250,19 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         inertiallabs = NEW_NOTHROW SITL::InertialLabs();
         return inertiallabs;
 
-#if HAL_SIM_AIS_ENABLED
+#if AP_SIM_AIS_ENABLED
     } else if (streq(name, "AIS")) {
-        if (ais != nullptr) {
+        if ((ais != nullptr) || (ais_replay != nullptr)) {
             AP_HAL::panic("Only one AIS at a time");
         }
         ais = NEW_NOTHROW SITL::AIS();
         return ais;
+    } else if (streq(name, "AISReplay")) {
+        if ((ais != nullptr) || (ais_replay != nullptr)) {
+            AP_HAL::panic("Only one AIS at a time");
+        }
+        ais_replay = NEW_NOTHROW SITL::AIS_Replay();
+        return ais_replay;
 #endif
     } else if (strncmp(name, "gps", 3) == 0) {
         uint8_t x = atoi(arg);
@@ -286,12 +294,12 @@ void SITL_State_Common::sim_update(void)
         gimbal->update(*sitl_model);
     }
 #endif
-#if HAL_SIM_ADSB_ENABLED
+#if AP_SIM_ADSB_ENABLED
     if (adsb != nullptr) {
         adsb->update(*sitl_model);
     }
-#endif
-#if !defined(HAL_BUILD_AP_PERIPH)
+#endif  // AP_SIM_ADSB_ENABLED
+#if AP_SIM_VICON_ENABLED
     if (vicon != nullptr) {
         Quaternion attitude;
         sitl_model->get_attitude(attitude);
@@ -300,7 +308,7 @@ void SITL_State_Common::sim_update(void)
                       sitl_model->get_velocity_ef(),
                       attitude);
     }
-#endif
+#endif  // AP_SIM_VICON_ENABLED
     for (uint8_t i=0; i<num_serial_rangefinders; i++) {
         serial_rangefinders[i]->update(sitl_model->rangefinder_range());
     }
@@ -333,24 +341,24 @@ void SITL_State_Common::sim_update(void)
     }
 #endif  // AP_SIM_PS_LD06_ENABLED
 
-#if HAL_SIM_PS_RPLIDARA2_ENABLED
+#if AP_SIM_PS_RPLIDARA2_ENABLED
     if (rplidara2 != nullptr) {
         rplidara2->update(sitl_model->get_location());
     }
 #endif
 
-#if HAL_SIM_PS_RPLIDARA1_ENABLED
+#if AP_SIM_PS_RPLIDARA1_ENABLED
     if (rplidara1 != nullptr) {
         rplidara1->update(sitl_model->get_location());
     }
 #endif
-#if HAL_SIM_PS_TERARANGERTOWER_ENABLED
+#if AP_SIM_PS_TERARANGERTOWER_ENABLED
     if (terarangertower != nullptr) {
         terarangertower->update(sitl_model->get_location());
     }
 #endif
 
-#if HAL_SIM_PS_LIGHTWARE_SF45B_ENABLED
+#if AP_SIM_PS_LIGHTWARE_SF45B_ENABLED
     if (sf45b != nullptr) {
         sf45b->update(sitl_model->get_location());
     }
@@ -377,9 +385,12 @@ void SITL_State_Common::sim_update(void)
         inertiallabs->update();
     }
 
-#if HAL_SIM_AIS_ENABLED
+#if AP_SIM_AIS_ENABLED
     if (ais != nullptr) {
-        ais->update();
+        ais->update(*sitl_model);
+    }
+    if (ais_replay != nullptr) {
+        ais_replay->update();
     }
 #endif
     for (uint8_t i=0; i<ARRAY_SIZE(gps); i++) {

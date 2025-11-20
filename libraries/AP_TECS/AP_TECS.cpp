@@ -442,7 +442,7 @@ void AP_TECS::_update_speed(float DT)
 
     // Equivalent airspeed
     float _EAS;
-    if (!use_airspeed || !_ahrs.airspeed_estimate(_EAS)) {
+    if (!use_airspeed || !_ahrs.airspeed_EAS(_EAS)) {
         // If no airspeed available use average of min and max
         _EAS = constrain_float(aparm.airspeed_cruise.get(), (float)aparm.airspeed_min.get(), (float)aparm.airspeed_max.get());
     }
@@ -618,7 +618,7 @@ void AP_TECS::_update_height_demand(void)
 
         if (!_flare_initialised) {
             _flare_hgt_dem_adj = _hgt_dem;
-            _flare_hgt_dem_ideal = _hgt_afe;
+            _flare_hgt_dem_ideal = _height;
             _hgt_at_start_of_flare = _hgt_afe;
             _hgt_rate_at_flare_entry = _climb_rate;
             _flare_initialised = true;
@@ -641,9 +641,6 @@ void AP_TECS::_update_height_demand(void)
 
         // fade across to the ideal height profile
         _hgt_dem = _flare_hgt_dem_adj * (1.0f - p) + _flare_hgt_dem_ideal * p;
-
-        // correct for offset between height above ground and height above datum used by control loops
-        _hgt_dem += (_hgt_afe - _height);
     }
 }
 
@@ -836,21 +833,24 @@ void AP_TECS::_update_throttle_with_airspeed(void)
             // @Field: I: integrator state for throttle
             // @Field: Emin: lower limit for potential energy error
             // @Field: Emax: upper limit for potential energy error
-            AP::logger().WriteStreaming("TEC3","TimeUS,KED,PED,KEDD,PEDD,TEE,TEDE,FFT,Imin,Imax,I,Emin,Emax",
-                                        "Qffffffffffff",
-                                        AP_HAL::micros64(),
-                                        (double)_SKEdot,
-                                        (double)_SPEdot,
-                                        (double)_SKEdot_dem,
-                                        (double)_SPEdot_dem,
-                                        (double)_STE_error,
-                                        (double)STEdot_error,
-                                        (double)ff_throttle,
-                                        (double)integ_min,
-                                        (double)integ_max,
-                                        (double)_integTHR_state,
-                                        (double)SPE_err_min,
-                                        (double)SPE_err_max);
+            AP::logger().WriteStreaming(
+                "TEC3",
+                "TimeUS," "KED," "PED," "KEDD," "PEDD," "TEE," "TEDE," "FFT," "Imin," "Imax," "I," "Emin," "Emax",
+                "Q"       "f"    "f"    "f"     "f"     "f"    "f"     "f"    "f"     "f"     "f"  "f"     "f",
+                AP_HAL::micros64(),
+                (double)_SKEdot,
+                (double)_SPEdot,
+                (double)_SKEdot_dem,
+                (double)_SPEdot_dem,
+                (double)_STE_error,
+                (double)STEdot_error,
+                (double)ff_throttle,
+                (double)integ_min,
+                (double)integ_max,
+                (double)_integTHR_state,
+                (double)SPE_err_min,
+                (double)SPE_err_max
+            );
         }
         // @LoggerMessage: TEC4
         // @Vehicles: Plane
@@ -926,7 +926,7 @@ void AP_TECS::_update_throttle_without_airspeed(int16_t throttle_nudge, float pi
     // so that the throttle mapping adjusts for the effect of pitch control errors
     _pitch_demand_lpf.apply(_pitch_dem, _DT);
     const float pitch_demand_hpf = _pitch_dem - _pitch_demand_lpf.get();
-    _pitch_measured_lpf.apply(_ahrs.get_pitch(), _DT);
+    _pitch_measured_lpf.apply(_ahrs.get_pitch_rad(), _DT);
     const float pitch_corrected_lpf = _pitch_measured_lpf.get() - radians(pitch_trim_deg);
     const float pitch_blended = pitch_demand_hpf + pitch_corrected_lpf;
 
@@ -1170,7 +1170,7 @@ void AP_TECS::_initialise_states(float hgt_afe)
         _integSEBdot          = 0.0f;
         _integKE              = 0.0f;
         _last_throttle_dem    = aparm.throttle_cruise * 0.01f;
-        _last_pitch_dem       = _ahrs.get_pitch();
+        _last_pitch_dem       = _ahrs.get_pitch_rad();
         _hgt_dem_in_prev      = hgt_afe;
         _hgt_dem_lpf          = hgt_afe;
         _hgt_dem_rate_ltd     = hgt_afe;
@@ -1199,8 +1199,8 @@ void AP_TECS::_initialise_states(float hgt_afe)
         const float fc = 1.0f / (M_2PI * _timeConst);
         _pitch_demand_lpf.set_cutoff_frequency(fc);
         _pitch_measured_lpf.set_cutoff_frequency(fc);
-        _pitch_demand_lpf.reset(_ahrs.get_pitch());
-        _pitch_measured_lpf.reset(_ahrs.get_pitch());
+        _pitch_demand_lpf.reset(_ahrs.get_pitch_rad());
+        _pitch_measured_lpf.reset(_ahrs.get_pitch_rad());
 
     } else if (_flight_stage == AP_FixedWing::FlightStage::TAKEOFF || _flight_stage == AP_FixedWing::FlightStage::ABORT_LANDING) {
         
@@ -1225,8 +1225,8 @@ void AP_TECS::_initialise_states(float hgt_afe)
         _TAS_dem_adj = _TAS_dem;
         _max_climb_scaler = 1.0f;
         _max_sink_scaler = 1.0f;
-        _pitch_demand_lpf.reset(_ahrs.get_pitch());
-        _pitch_measured_lpf.reset(_ahrs.get_pitch());
+        _pitch_demand_lpf.reset(_ahrs.get_pitch_rad());
+        _pitch_measured_lpf.reset(_ahrs.get_pitch_rad());
         
 
         if (!_flag_have_reset_after_takeoff) {

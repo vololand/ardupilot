@@ -11,7 +11,7 @@ STORAGE_FLASH_PAGE 11
 define HAL_STORAGE_SIZE 800
 
 # board ID. See Tools/AP_Bootloader/board_types.txt
-APJ_BOARD_ID 1004
+APJ_BOARD_ID AP_HW_F303_PERIPH
 
 # setup build for a peripheral firmware
 env AP_PERIPH 1
@@ -61,7 +61,6 @@ define HAL_USE_ADC FALSE
 define STM32_ADC_USE_ADC1 FALSE
 define HAL_DISABLE_ADC_DRIVER TRUE
 
-define HAL_NO_GPIO_IRQ
 define SERIAL_BUFFERS_SIZE 512
 define PORT_INT_REQUIRED_STACK 64
 

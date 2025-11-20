@@ -159,7 +159,7 @@ const AP_Param::GroupInfo AP_AHRS::var_info[] = {
     // @Param: EKF_TYPE
     // @DisplayName: Use NavEKF Kalman filter for attitude and position estimation
     // @Description: This controls which NavEKF Kalman filter version is used for attitude and position estimation
-    // @Values: 0:Disabled,2:Enable EKF2,3:Enable EKF3,11:ExternalAHRS
+    // @Values: 0:Disabled,2:Enable EKF2,3:Enable EKF3, 10:Sim, 11:ExternalAHRS
     // @User: Advanced
     AP_GROUPINFO("EKF_TYPE",  14, AP_AHRS, _ekf_type, HAL_AHRS_EKF_TYPE_DEFAULT),
 
@@ -373,13 +373,18 @@ void AP_AHRS::update_state(void)
     state.primary_core = _get_primary_core_index();
     state.wind_estimate_ok = _wind_estimate(state.wind_estimate);
     state.EAS2TAS = AP_AHRS_Backend::get_EAS2TAS();
-    state.airspeed_ok = _airspeed_EAS(state.airspeed, state.airspeed_estimate_type);
-    state.airspeed_true_ok = _airspeed_TAS(state.airspeed_true);
-    state.airspeed_vec_ok = _airspeed_TAS(state.airspeed_vec);
+    state.airspeed_EAS_ok = _airspeed_EAS(state.airspeed_EAS, state.airspeed_estimate_type);
+    state.airspeed_TAS_ok = _airspeed_TAS(state.airspeed_TAS);
+    state.airspeed_TAS_vec_ok = _airspeed_TAS(state.airspeed_TAS_vec);
     state.quat_ok = _get_quaternion(state.quat);
     state.secondary_attitude_ok = _get_secondary_attitude(state.secondary_attitude);
     state.secondary_quat_ok = _get_secondary_quaternion(state.secondary_quat);
     state.location_ok = _get_location(state.location);
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    if (state.location_ok && !state.location.initialised()) {
+        AP_HAL::panic("uninitialised location returned by _get_location");
+    }
+#endif  // CONFIG_HAL_BOARD == HAL_BOARD_SITL
     state.secondary_pos_ok = _get_secondary_position(state.secondary_pos);
     state.ground_speed_vec = _groundspeed_vector();
     state.ground_speed = _groundspeed();
@@ -922,7 +927,7 @@ float AP_AHRS::wind_alignment(const float heading_deg) const
  */
 float AP_AHRS::head_wind(void) const
 {
-    const float alignment = wind_alignment(yaw_sensor*0.01f);
+    const float alignment = wind_alignment(get_yaw_deg());
     return alignment * wind_estimate().xy().length();
 }
 
@@ -1083,7 +1088,7 @@ bool AP_AHRS::_airspeed_TAS(float &airspeed_ret) const
         break;
     }
 
-    if (!airspeed_estimate(airspeed_ret)) {
+    if (!airspeed_EAS(airspeed_ret)) {
         return false;
     }
     airspeed_ret *= get_EAS2TAS();
@@ -1158,7 +1163,7 @@ bool AP_AHRS::airspeed_health_data(float &innovation, float &innovationVariance,
 // other than an actual airspeed sensor), if available. return
 // true if we have a synthetic airspeed.  ret will not be modified
 // on failure.
-bool AP_AHRS::synthetic_airspeed(float &ret) const
+bool AP_AHRS::dcm_synthetic_airspeed_EAS(float &ret) const
 {
 #if AP_AHRS_DCM_ENABLED
     return dcm.synthetic_airspeed_EAS(ret);
@@ -2515,6 +2520,22 @@ void AP_AHRS::writeExtNavVelData(const Vector3f &vel, float err, uint32_t timeSt
 #endif
 }
 
+// set the terrain SRTM altitude in meters above sea level
+// only used by optical flow when out of rangefinder range
+// Write terrain (derived from SRTM) altitude in meters above sea level
+void AP_AHRS::writeTerrainAMSL(float alt_amsl_m)
+{
+#if EK3_FEATURE_OPTFLOW_SRTM
+    // return immediately if EKF origin has not been set
+    if (!state.origin_ok) {
+        return;
+    }
+    // convert from amsl alt to alt above EKF origin
+    const float alt_above_origin_m = alt_amsl_m - (state.origin.alt * 0.01f);
+    EKF3.writeTerrainData(alt_above_origin_m);
+#endif
+}
+
 // get speed limit and XY navigation gain scale factor
 void AP_AHRS::getControlLimits(float &ekfGndSpdLimit, float &ekfNavVelGainScaler) const
 {
@@ -3018,7 +3039,7 @@ bool AP_AHRS::set_home(const Location &loc)
 {
     WITH_SEMAPHORE(_rsem);
     // check location is valid
-    if (loc.lat == 0 && loc.lng == 0 && loc.alt == 0) {
+    if (!loc.initialised()) {
         return false;
     }
     if (!loc.check_latlng()) {
@@ -3612,35 +3633,35 @@ bool AP_AHRS::wind_estimate(Vector3f &wind) const
 
 // return an airspeed estimate if available. return true
 // if we have an estimate
-bool AP_AHRS::airspeed_estimate(float &airspeed_ret) const
+bool AP_AHRS::airspeed_EAS(float &airspeed_ret) const
 {
-    airspeed_ret = state.airspeed;
-    return state.airspeed_ok;
+    airspeed_ret = state.airspeed_EAS;
+    return state.airspeed_EAS_ok;
 }
 
 // return an airspeed estimate if available. return true
 // if we have an estimate
-bool AP_AHRS::airspeed_estimate(float &airspeed_ret, AP_AHRS::AirspeedEstimateType &type) const
+bool AP_AHRS::airspeed_EAS(float &airspeed_ret, AP_AHRS::AirspeedEstimateType &type) const
 {
-    airspeed_ret = state.airspeed;
+    airspeed_ret = state.airspeed_EAS;
     type = state.airspeed_estimate_type;
-    return state.airspeed_ok;
+    return state.airspeed_EAS_ok;
 }
 
 // return a true airspeed estimate (navigation airspeed) if
 // available. return true if we have an estimate
-bool AP_AHRS::airspeed_estimate_true(float &airspeed_ret) const
+bool AP_AHRS::airspeed_TAS(float &airspeed_ret) const
 {
-    airspeed_ret = state.airspeed_true;
-    return state.airspeed_true_ok;
+    airspeed_ret = state.airspeed_TAS;
+    return state.airspeed_TAS_ok;
 }
 
 // return estimate of true airspeed vector in body frame in m/s
 // returns false if estimate is unavailable
-bool AP_AHRS::airspeed_vector_true(Vector3f &vec) const
+bool AP_AHRS::airspeed_vector_TAS(Vector3f &vec) const
 {
-    vec = state.airspeed_vec;
-    return state.airspeed_vec_ok;
+    vec = state.airspeed_TAS_vec;
+    return state.airspeed_TAS_vec_ok;
 }
 
 // return the quaternion defining the rotation from NED to XYZ (body) axes

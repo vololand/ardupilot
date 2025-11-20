@@ -95,10 +95,10 @@ void Plane::Log_Write_Control_Tuning()
 {
     float est_airspeed = 0;
     AP_AHRS::AirspeedEstimateType airspeed_estimate_type = AP_AHRS::AirspeedEstimateType::NO_NEW_ESTIMATE;
-    ahrs.airspeed_estimate(est_airspeed, airspeed_estimate_type);
+    ahrs.airspeed_EAS(est_airspeed, airspeed_estimate_type);
 
     float synthetic_airspeed;
-    if (!ahrs.synthetic_airspeed(synthetic_airspeed)) {
+    if (!ahrs.dcm_synthetic_airspeed_EAS(synthetic_airspeed)) {
         synthetic_airspeed = logger.quiet_nan();
     }
 
@@ -284,7 +284,7 @@ void Plane::Log_Write_Guided(void)
         logger.Write_PID(LOG_PIDG_MSG, g2.guidedHeading.get_pid_info());
     }
 
-    if ( guided_state.target_location.alt != -1 || is_positive(guided_state.target_airspeed_cm) ) {
+    if (!guided_state.target_location_alt_is_minus_one() || is_positive(guided_state.target_airspeed_cm) ) {
         Log_Write_OFG_Guided();
     }
 #endif // AP_PLANE_OFFBOARD_GUIDED_SLEW_ENABLED
@@ -442,10 +442,10 @@ const struct LogStructure Plane::log_structure[] = {
 #endif
 
 // @LoggerMessage: TSIT
-// @Description: tailsitter speed scailing values
+// @Description: tailsitter speed scaling values
 // @Field: TimeUS: Time since system startup
 // @Field: Ts: throttle scaling used for tilt motors
-// @Field: Ss: speed scailing used for control surfaces method from Q_TAILSIT_GSCMSK
+// @Field: Ss: speed scaling used for control surfaces method from Q_TAILSIT_GSCMSK
 // @Field: Tmin: minimum output throttle calculated from disk thoery gain scale with Q_TAILSIT_MIN_VO
 #if HAL_QUADPLANE_ENABLED
     { LOG_TSIT_MSG, sizeof(Tailsitter::log_tailsitter),
@@ -530,5 +530,66 @@ void Plane::Log_Write_Vehicle_Startup_Messages()
     ahrs.Log_Write_Home_And_Origin();
     gps.Write_AP_Logger_Log_Startup_messages();
 }
+
+#if AP_PLANE_BLACKBOX_LOGGING
+/*
+  logging for blackbox recording. Split across two messages but with
+  the same timestamp
+ */
+void Plane::Log_Write_Blackbox(void)
+{
+    const uint64_t now_us = AP_HAL::micros64();
+    // @LoggerMessage: BBX1
+    // @Description: BlackBox data1
+    // @Field: TimeUS: Time since system startup
+    // @Field: Lat: Latitude
+    // @Field: Lon: Longitude
+    // @Field: Alt: altitude above sea level
+    // @Field: Roll: euler roll
+    // @Field: Pitch: euler pitch
+    // @Field: Yaw: euler yaw
+    // @Field: VN: velocity north
+    // @Field: VE: velocity east
+    // @Field: VD: velocity down
+    Location loc;
+    Vector3f vel;
+    float alt;
+    if (!ahrs.get_location(loc) ||
+        !ahrs.get_velocity_NED(vel) ||
+        !loc.get_alt_m(Location::AltFrame::ABSOLUTE, alt)) {
+        return;
+    }
+
+    AP::logger().WriteStreaming("BBX1", "TimeUS,Lat,Lon,Alt,Roll,Pitch,Yaw,VN,VE,VD",
+                                "sDUmdddnnn",
+                                "FGG-------",
+                                "QLLfffffff",
+                                now_us,
+                                loc.lat, loc.lng, alt,
+                                degrees(ahrs.get_roll_rad()),
+                                degrees(ahrs.get_pitch_rad()),
+                                degrees(ahrs.get_yaw_rad()),
+                                vel.x, vel.y, vel.z);
+
+    // @LoggerMessage: BBX2
+    // @Description: BlackBox data2
+    // @Field: TimeUS: Time since system startup
+    // @Field: GyrX: X axis gyro
+    // @Field: GyrY: Y axis gyro
+    // @Field: GyrZ: Z axis gyro
+    // @Field: AccX: accel X axis (front)
+    // @Field: AccY: accel Y axis (right)
+    // @Field: AccZ: accel Z axis (down)
+    const auto &gyro = ahrs.get_gyro();
+    const auto &accel = ahrs.get_accel();
+    AP::logger().WriteStreaming("BBX2", "TimeUS,GyrX,GyrY,GyrZ,AccX,AccY,AccZ",
+                                "skkkooo",
+                                "F------",
+                                "Qffffff",
+                                now_us,
+                                degrees(gyro.x), degrees(gyro.y), degrees(gyro.z),
+                                accel.x, accel.y, accel.z);
+}
+#endif // AP_PLANE_BLACKBOX_LOGGING
 
 #endif // HAL_LOGGING_ENABLED

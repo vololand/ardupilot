@@ -16,7 +16,7 @@ STM32_ST_USE_TIMER 15
 define CH_CFG_ST_RESOLUTION 16
 
 # board ID for firmware load
-APJ_BOARD_ID 1407
+APJ_BOARD_ID AP_HW_VIMDRONES_PERIPH
 
 # crystal frequency
 OSCILLATOR_HZ 24000000
@@ -24,8 +24,6 @@ define STM32_HSE_BYPASS
 
 env AP_PERIPH 1
 
-define HAL_NO_GPIO_IRQ
-define HAL_USE_EMPTY_IO TRUE
 define DMA_RESERVE_SIZE 0
 
 # MAIN_STACK is stack for ISR handlers

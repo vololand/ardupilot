@@ -140,6 +140,7 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     // @DisplayName: Specific Gravity (For water depth measurement)
     // @Description: This sets the specific gravity of the fluid when flying an underwater ROV.
     // @Values: 1.0:Freshwater,1.024:Saltwater
+    // @Range: 0.98 1.05
     AP_GROUPINFO_FRAME("_SPEC_GRAV", 8, AP_Baro, _specific_gravity, 1.0, AP_PARAM_FRAME_SUB),
 
 #if BARO_MAX_INSTANCES > 1
@@ -492,7 +493,7 @@ bool AP_Baro::_add_backend(AP_Baro_Backend *backend)
     if (!backend) {
         return false;
     }
-    if (_num_drivers >= BARO_MAX_DRIVERS) {
+    if (_num_drivers >= ARRAY_SIZE(drivers)) {
         AP_HAL::panic("Too many barometer drivers");
     }
     drivers[_num_drivers++] = backend;
@@ -520,8 +521,8 @@ bool AP_Baro::_have_i2c_driver(uint8_t bus, uint8_t address) const
  */
 #define ADD_BACKEND(backend) \
     do { _add_backend(backend);     \
-       if (_num_drivers == BARO_MAX_DRIVERS || \
-          _num_sensors == BARO_MAX_INSTANCES) { \
+        if (_num_drivers == ARRAY_SIZE(drivers) ||  \
+            _num_sensors == ARRAY_SIZE(sensors)) {  \
           return; \
        } \
     } while (0)
@@ -542,8 +543,8 @@ void AP_Baro::init(void)
     }
 
     // zero bus IDs before probing
-    for (uint8_t i = 0; i < BARO_MAX_INSTANCES; i++) {
-        sensors[i].bus_id.set(0);
+    for (auto &sensor : sensors) {
+        sensor.bus_id.set(0);
     }
 
 #if AP_SIM_BARO_ENABLED
@@ -601,14 +602,6 @@ void AP_Baro::init(void)
     case AP_BoardConfig::PX4_BOARD_PHMINI:
     case AP_BoardConfig::PX4_BOARD_AUAV21:
     case AP_BoardConfig::PX4_BOARD_PH2SLIM:
-    case AP_BoardConfig::PX4_BOARD_PIXHAWK_PRO:
-    case AP_BoardConfig::PX4_BOARD_MINDPXV2:
-    case AP_BoardConfig::VRX_BOARD_BRAIN51:
-    case AP_BoardConfig::VRX_BOARD_BRAIN52:
-    case AP_BoardConfig::VRX_BOARD_BRAIN52E:
-    case AP_BoardConfig::VRX_BOARD_CORE10:
-    case AP_BoardConfig::VRX_BOARD_UBRAIN51:
-    case AP_BoardConfig::VRX_BOARD_UBRAIN52:
     case AP_BoardConfig::PX4_BOARD_FMUV5:
     case AP_BoardConfig::PX4_BOARD_FMUV6:
 #if AP_BARO_MS5611_ENABLED
@@ -618,7 +611,6 @@ void AP_Baro::init(void)
         break;
 
     case AP_BoardConfig::PX4_BOARD_PIXHAWK2:
-    case AP_BoardConfig::PX4_BOARD_SP01:
 #if AP_BARO_MS5611_ENABLED
         ADD_BACKEND(AP_Baro_MS5611::probe(*this,
                                           std::move(hal.spi->get_device(HAL_BARO_MS5611_SPI_EXT_NAME))));
@@ -636,31 +628,10 @@ void AP_Baro::init(void)
 #endif  // AP_BARO_MS5607_ENABLED
         break;
 
-    case AP_BoardConfig::VRX_BOARD_BRAIN54:
-#if AP_BARO_MS5611_ENABLED
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_NAME))));
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_SPI_EXT_NAME))));
-#ifdef HAL_BARO_MS5611_SPI_IMU_NAME
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_SPI_IMU_NAME))));
-#endif
-#endif  // AP_BARO_MS5611_ENABLED
-        break;
-
-    case AP_BoardConfig::PX4_BOARD_PCNC1:
-#if AP_BARO_ICM20789_ENABLED
-        ADD_BACKEND(AP_Baro_ICM20789::probe(*this,
-                                            std::move(GET_I2C_DEVICE(1, 0x63)),
-                                            std::move(hal.spi->get_device(HAL_INS_MPU60x0_NAME))));
-#endif
-        break;
-
     default:
         break;
     }
-#endif
+#endif  // defined(HAL_BARO_PROBE_LIST) / AP_FEATURE_BOARD_DETECT
 
     // can optionally have baro on I2C too
     if (_ext_bus >= 0) {
@@ -1005,7 +976,7 @@ float AP_Baro::thrust_pressure_correction(uint8_t instance)
 */
 uint8_t AP_Baro::register_sensor(void)
 {
-    if (_num_sensors >= BARO_MAX_INSTANCES) {
+    if (_num_sensors >= ARRAY_SIZE(sensors)) {
         AP_HAL::panic("Too many barometers");
     }
     return _num_sensors++;

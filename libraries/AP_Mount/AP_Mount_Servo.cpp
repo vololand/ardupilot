@@ -16,13 +16,11 @@ void AP_Mount_Servo::init()
         _roll_idx = SRV_Channel::k_mount_roll;
         _tilt_idx = SRV_Channel::k_mount_tilt;
         _pan_idx  = SRV_Channel::k_mount_pan;
-        _open_idx = SRV_Channel::k_mount_open;
     } else {
         // this must be the 2nd mount
         _roll_idx = SRV_Channel::k_mount2_roll;
         _tilt_idx = SRV_Channel::k_mount2_tilt;
         _pan_idx  = SRV_Channel::k_mount2_pan;
-        _open_idx = SRV_Channel::k_mount2_open;
     }
     AP_Mount_Backend::init();
 }
@@ -30,6 +28,8 @@ void AP_Mount_Servo::init()
 // update mount position - should be called periodically
 void AP_Mount_Servo::update()
 {
+    AP_Mount_Backend::update();
+
     // change to RC_TARGETING mode if RC input has changed
     set_rctargeting_on_rcinput_change();
 
@@ -101,10 +101,6 @@ void AP_Mount_Servo::update()
             break;
     }
 
-    // move mount to a "retracted position" into the fuselage with a fourth servo
-    const bool mount_open = (mount_mode == MAV_MOUNT_MODE_RETRACT) ? 0 : 1;
-    move_servo(_open_idx, mount_open, 0, 1);
-
     // write the results to the servos
     move_servo(_roll_idx, degrees(_angle_bf_output_rad.x)*10, _params.roll_angle_min*10, _params.roll_angle_max*10);
     move_servo(_tilt_idx, degrees(_angle_bf_output_rad.y)*10, _params.pitch_angle_min*10, _params.pitch_angle_max*10);
@@ -173,7 +169,7 @@ void AP_Mount_Servo::update_angle_outputs(const MountTarget& angle_rad)
     }
 
     // retrieve lean angles from ahrs
-    Vector2f ahrs_angle_rad = {ahrs.get_roll(), ahrs.get_pitch()};
+    Vector2f ahrs_angle_rad = {ahrs.get_roll_rad(), ahrs.get_pitch_rad()};
 
     // rotate ahrs roll and pitch angles to gimbal yaw
     if (has_pan_control()) {
@@ -187,7 +183,7 @@ void AP_Mount_Servo::update_angle_outputs(const MountTarget& angle_rad)
     // lead filter
     const Vector3f &gyro = ahrs.get_gyro();
 
-    if (!is_zero(_params.roll_stb_lead) && fabsf(ahrs.get_pitch()) < M_PI/3.0f) {
+    if (!is_zero(_params.roll_stb_lead) && fabsf(ahrs.get_pitch_rad()) < M_PI/3.0f) {
         // Compute rate of change of euler roll angle
         float roll_rate = gyro.x + (ahrs.sin_pitch() / ahrs.cos_pitch()) * (gyro.y * ahrs.sin_roll() + gyro.z * ahrs.cos_roll());
         _angle_bf_output_rad.x -= roll_rate * _params.roll_stb_lead;

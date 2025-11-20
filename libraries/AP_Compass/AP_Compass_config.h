@@ -68,15 +68,6 @@
 #define AP_COMPASS_BMM150_ENABLED AP_COMPASS_I2C_BACKEND_DEFAULT_ENABLED
 #endif
 
-// this define dictates whether we iterate over the external i2c
-// busses looking for BMM150.  Ordinarily this should be true, but
-// SkyViper specifies its BMM150 and thus does not need to probe.
-// This is an interim arrangement until PCNC1 is eliminated as an
-// auto-detect board.
-#ifndef AP_COMPASS_BMM150_DETECT_BACKENDS_ENABLED
-#define AP_COMPASS_BMM150_DETECT_BACKENDS_ENABLED AP_COMPASS_BMM150_ENABLED
-#endif
-
 #ifndef AP_COMPASS_BMM350_ENABLED
 #define AP_COMPASS_BMM350_ENABLED AP_COMPASS_I2C_BACKEND_DEFAULT_ENABLED
 #endif
@@ -135,4 +126,22 @@
 
 #ifndef AP_COMPASS_RM3100_ENABLED
 #define AP_COMPASS_RM3100_ENABLED AP_COMPASS_I2C_BACKEND_DEFAULT_ENABLED
+#endif
+
+#ifndef AP_COMPASS_PROBING_ENABLED
+// FIXME: vast majority of boards define this to 1!
+#define AP_COMPASS_PROBING_ENABLED 0
+#endif
+
+// boards can specify that they do not want their internal buses
+// probed for compasses - we default to probing them if we are probing
+// any buses:
+#ifndef AP_COMPASS_INTERNAL_BUS_PROBING_ENABLED
+#define AP_COMPASS_INTERNAL_BUS_PROBING_ENABLED (AP_COMPASS_PROBING_ENABLED || AP_FEATURE_BOARD_DETECT)
+#endif
+
+// some boards do not want to probe the internal buses for IS8310 but
+// *do* want to probe internal buses for other compasses:
+#ifndef AP_COMPASS_IST8310_INTERNAL_BUS_PROBING_ENABLED
+#define AP_COMPASS_IST8310_INTERNAL_BUS_PROBING_ENABLED (AP_COMPASS_IST8310_ENABLED && AP_COMPASS_INTERNAL_BUS_PROBING_ENABLED)
 #endif

@@ -157,6 +157,10 @@ void AP_AHRS::update_cd_values(void)
     yaw_sensor   = degrees(yaw) * 100;
     if (yaw_sensor < 0)
         yaw_sensor += 36000;
+
+    rpy_deg[0] = degrees(roll);
+    rpy_deg[1] = degrees(pitch);
+    rpy_deg[2] = wrap_360(degrees(yaw));  // we are probably already in trouble if this is required
 }
 
 /*
@@ -242,6 +246,13 @@ Vector2f AP_AHRS::earth_to_body2D(const Vector2f &ef) const
 Vector2f AP_AHRS::body_to_earth2D(const Vector2f &bf) const
 {
     return Vector2f(bf.x * _cos_yaw - bf.y * _sin_yaw,
+                    bf.x * _sin_yaw + bf.y * _cos_yaw);
+}
+
+// rotate a 2D vector from earth frame to body frame
+Vector2p AP_AHRS::body_to_earth2D_p(const Vector2p &bf) const
+{
+    return Vector2p(bf.x * _cos_yaw - bf.y * _sin_yaw,
                     bf.x * _sin_yaw + bf.y * _cos_yaw);
 }
 

@@ -59,6 +59,11 @@ public:
     // apply pitch trim
     void set_pitch_trim(float trim_deg);
 
+    // roll/pitch/yaw euler angles, all in radians
+    float get_roll_rad() const { return roll; }
+    float get_pitch_rad() const { return pitch; }
+    float get_yaw_rad() const { return yaw; }
+
     // helper trig value accessors
     float cos_roll() const {
         return trig.cos_roll;
@@ -92,12 +97,12 @@ public:
         return ahrs.wind_estimate(wind);
     }
 
-    bool airspeed_estimate(float &airspeed_ret) const WARN_IF_UNUSED {
-        return ahrs.airspeed_estimate(airspeed_ret);
+    bool airspeed_EAS(float &airspeed_ret) const WARN_IF_UNUSED {
+        return ahrs.airspeed_EAS(airspeed_ret);
     }
 
-    bool airspeed_estimate_true(float &airspeed_ret) const WARN_IF_UNUSED {
-        return ahrs.airspeed_estimate_true(airspeed_ret);
+    bool airspeed_TAS(float &airspeed_ret) const WARN_IF_UNUSED {
+        return ahrs.airspeed_TAS(airspeed_ret);
     }
 
     float get_EAS2TAS(void) const {

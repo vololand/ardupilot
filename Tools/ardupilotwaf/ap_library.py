@@ -12,6 +12,9 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# flake8: noqa
+
 """
 Waf tool for Ardupilot libraries. The function bld.ap_library() creates the
 necessary task generators for creating the objects of a library for a vehicle.
@@ -196,9 +199,7 @@ class ap_library_check_headers(Task.Task):
         bld = self.generator.bld
         # force scan() to be called
         bld.imp_sigs[self.uid()] = None
-        s = super(ap_library_check_headers, self).signature()
-        bld.ap_persistent_task_sigs[self.uid()] = s
-        return s
+        return super(ap_library_check_headers, self).signature()
 
     def scan(self):
         r = []

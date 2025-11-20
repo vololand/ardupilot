@@ -675,16 +675,23 @@ void AP_Periph_FW::handle_act_command(CanardInstance* canard_instance, CanardRxT
         return;
     }
 
+    bool valid_output = false;
     for (uint8_t i=0; i < cmd.commands.len; i++) {
         const auto &c = cmd.commands.data[i];
         switch (c.command_type) {
         case UAVCAN_EQUIPMENT_ACTUATOR_COMMAND_COMMAND_TYPE_UNITLESS:
             rcout_srv_unitless(c.actuator_id, c.command_value);
+            valid_output = true;
             break;
         case UAVCAN_EQUIPMENT_ACTUATOR_COMMAND_COMMAND_TYPE_PWM:
             rcout_srv_PWM(c.actuator_id, c.command_value);
+            valid_output = true;
             break;
         }
+    }
+
+    if (valid_output) {
+        actuator.last_command_ms = AP_HAL::millis();
     }
 }
 #endif // AP_PERIPH_RC_OUT_ENABLED
@@ -702,7 +709,7 @@ void AP_Periph_FW::handle_notify_state(CanardInstance* canard_instance, CanardRx
         yaw_earth = radians((float)tmp * 0.01f);
     }
     vehicle_state = msg.vehicle_state;
-    last_vehicle_state = AP_HAL::millis();
+    last_vehicle_state_ms = AP_HAL::millis();
 }
 #endif // AP_PERIPH_NOTIFY_ENABLED
 
@@ -1480,8 +1487,9 @@ void AP_Periph_FW::process1HzTasks(uint64_t timestamp_usec)
          * record the worst case memory usage.
          */
 
-        if (pool_peak_percent() > 70) {
-            printf("WARNING: ENLARGE MEMORY POOL\n");
+        const float pool_pct = pool_peak_percent();
+        if (pool_pct > 70) {
+            printf("WARNING: ENLARGE MEMORY POOL (peak=%f%%)\n", pool_pct);
         }
     }
 
@@ -1700,9 +1708,9 @@ void AP_Periph_FW::can_start()
 #endif
         if (can_iface_periph[i] != nullptr) {
 #if HAL_CANFD_SUPPORTED
-            can_iface_periph[i]->init(g.can_baudrate[i], g.can_fdbaudrate[i]*1000000U, AP_HAL::CANIface::NormalMode);
+            can_iface_periph[i]->init(g.can_baudrate[i], g.can_fdbaudrate[i]*1000000U);
 #else
-            can_iface_periph[i]->init(g.can_baudrate[i], AP_HAL::CANIface::NormalMode);
+            can_iface_periph[i]->init(g.can_baudrate[i]);
 #endif
         }
     }

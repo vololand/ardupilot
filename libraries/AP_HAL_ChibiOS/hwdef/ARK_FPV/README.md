@@ -181,7 +181,7 @@ RC input is configured on the RX6 (UART6_RX) pin. It supports all RC protocols e
 - SBUS/DSM/SRXL connects to the RX6 pin.
 - FPort requires connection to TX6 and :ref:`SERIAL6_OPTIONS<SERIAL2_OPTIONS>` be set to “7”.
 - CRSF also requires a TX6 connection, in addition to RX6, and automatically provides telemetry. Set :ref:`SERIAL6_OPTIONS<SERIAL6_OPTIONS>`
-- SRXL2 requires a connecton to TX6 and automatically provides telemetry. Set :ref:`SERIAL6_OPTIONS<SERIAL6_OPTIONS>` to “4”. =3.
+- SRXL2 requires a connection to TX6 and automatically provides telemetry. Set :ref:`SERIAL6_OPTIONS<SERIAL6_OPTIONS>` to “4”. =3.
 
 ## Battery Monitoring
 
@@ -193,7 +193,7 @@ The default battery parameters are:
 - BATT_VOLT_PIN 9
 - BATT_CURR_PIN 12
 - BATT_VOLT_SCALE 21
-- BATT_CURR_SCALE 120
+- BATT_AMP_PERVLT 120
 
 ## Compass
 This autopilot has a built-in compass. The compass is the IIS2MDC

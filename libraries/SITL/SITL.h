@@ -33,6 +33,7 @@
 #include "SIM_DroneCANDevice.h"
 #include "SIM_ADSB_Sagetech_MXS.h"
 #include "SIM_Volz.h"
+#include "SIM_AIS.h"
 
 namespace SITL {
 
@@ -116,7 +117,7 @@ public:
         AP_Param::setup_object_defaults(this, var_info);
         AP_Param::setup_object_defaults(this, var_info2);
         AP_Param::setup_object_defaults(this, var_info3);
-#if HAL_SIM_GPS_ENABLED
+#if AP_SIM_GPS_ENABLED
         AP_Param::setup_object_defaults(this, var_gps);
 #endif
         AP_Param::setup_object_defaults(this, var_mag);
@@ -150,6 +151,7 @@ public:
         SITL_RCFail_None = 0,
         SITL_RCFail_NoPulses = 1,
         SITL_RCFail_Throttle950 = 2,
+        SITL_RCFail_Protocol_Fail_Bit_Set = 3,
     };
 
     enum GPSHeading {
@@ -168,7 +170,7 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
     static const struct AP_Param::GroupInfo var_info2[];
     static const struct AP_Param::GroupInfo var_info3[];
-#if HAL_SIM_GPS_ENABLED
+#if AP_SIM_GPS_ENABLED
     static const struct AP_Param::GroupInfo var_gps[];
 #endif
     static const struct AP_Param::GroupInfo var_mag[];
@@ -321,9 +323,11 @@ public:
         AP_Float accuracy;
         AP_Vector3f vel_err; // Velocity error offsets in NED (x = N, y = E, z = D)
         AP_Int8 jam; // jamming simulation enable
+        AP_Float heading_offset; // heading offset in degrees
     };
     GPSParms gps[AP_SIM_MAX_GPS_SENSORS];
 
+#if AP_SIM_VICON_ENABLED
     class ViconParms {
     public:
         ViconParms(void) {
@@ -344,6 +348,7 @@ public:
         AP_Int16 rate_hz;     // vicon data rate in Hz
     };
     ViconParms vicon;
+#endif  // AP_SIM_VICON_ENABLED
 
     // physics model parameters
     class ModelParm {
@@ -367,6 +372,9 @@ public:
 #if AP_SIM_FLIGHTAXIS_ENABLED
         FlightAxis *flightaxis_ptr;
 #endif
+#if AP_SIM_AIS_ENABLED
+        class AIS *ais_ptr;
+#endif  // AP_SIM_AIS_ENABLED
     };
     ModelParm models;
     

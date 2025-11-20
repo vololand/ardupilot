@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 script to determine what features have been built into an ArduPilot binary
@@ -98,6 +98,7 @@ class ExtractFeatures(object):
 
             ('AP_BARO_{type}_ENABLED', r'AP_Baro_(?P<type>.*)::(_calculate|update)\b',),
 
+            ('AP_MOTORS_TRI_ENABLED', 'AP_MotorsTri::set_frame_class_and_type'),
             ('AP_MOTORS_FRAME_{type}_ENABLED', r'AP_MotorsMatrix::setup_(?P<type>.*)_matrix\b',),
 
             ('HAL_MSP_ENABLED', r'AP_MSP::init\b',),
@@ -228,6 +229,7 @@ class ExtractFeatures(object):
             ('EK3_FEATURE_EXTERNAL_NAV', r'NavEKF3_core::CorrectExtNavVelForSensorOffset'),
             ('EK3_FEATURE_DRAG_FUSION', r'NavEKF3_core::FuseDragForces'),
             ('EK3_FEATURE_OPTFLOW_FUSION', r'NavEKF3_core::FuseOptFlow'),
+            ('EK3_FEATURE_OPTFLOW_SRTM', r'NavEKF3_core::writeTerrainData'),
 
             ('AP_RC_CHANNEL_AUX_FUNCTION_STRINGS_ENABLED', r'RC_Channel::lookuptable',),
             ('AP_SCRIPTING_ENABLED', r'AP_Scripting::init',),
@@ -249,6 +251,7 @@ class ExtractFeatures(object):
             ('AP_CAN_SLCAN_ENABLED', 'SLCAN::CANIface::var_info'),
             ('AC_POLYFENCE_FENCE_POINT_PROTOCOL_SUPPORT', 'AC_PolyFence_loader::handle_msg_fetch_fence_point'),
             ('AP_MAVLINK_RALLY_POINT_PROTOCOL_ENABLED', 'GCS_MAVLINK::handle_common_rally_message'),
+            ('AP_ADSB_AVOIDANCE_ENABLED', 'AP_Avoidance::init'),
 
             ('AP_SDCARD_STORAGE_ENABLED', 'StorageAccess::attach_file'),
             ('AP_MAVLINK_AUTOPILOT_VERSION_REQUEST_ENABLED', 'GCS_MAVLINK::handle_send_autopilot_version'),
@@ -259,11 +262,12 @@ class ExtractFeatures(object):
             ('AP_MAVLINK_MSG_SERIAL_CONTROL_ENABLED', 'GCS_MAVLINK::handle_serial_control'),
             ('AP_MAVLINK_MSG_MISSION_REQUEST_ENABLED', r'GCS_MAVLINK::handle_mission_request\b'),
             ('AP_MAVLINK_MSG_RC_CHANNELS_RAW_ENABLED', r'GCS_MAVLINK::send_rc_channels_raw\b'),
-            ('AP_MAVLINK_FTP_ENABLED', 'GCS_MAVLINK::ftp_worker'),
+            ('AP_MAVLINK_FTP_ENABLED', 'GCS_FTP::init'),
             ('AP_MAVLINK_MAV_CMD_SET_HAGL_ENABLED', 'Plane::handle_external_hagl'),
             ('AP_MAVLINK_MSG_VIDEO_STREAM_INFORMATION_ENABLED', 'AP_Camera::send_video_stream_information'),
             ('AP_MAVLINK_MSG_FLIGHT_INFORMATION_ENABLED', 'GCS_MAVLINK::send_flight_information'),
             ('AP_MAVLINK_MSG_RANGEFINDER_SENDING_ENABLED', r'GCS_MAVLINK::send_rangefinder'),
+            ('AP_MAVLINK_SIGNING_ENABLED', r'GCS_MAVLINK::load_signing_key'),
 
             ('AP_DRONECAN_HIMARK_SERVO_SUPPORT', 'AP_DroneCAN::SRV_send_himark'),
             ('AP_DRONECAN_HOBBYWING_ESC_SUPPORT', 'AP_DroneCAN::hobbywing_ESC_update'),
@@ -274,6 +278,8 @@ class ExtractFeatures(object):
             ('AP_NETWORKING_ENABLED', 'AP_Networking::init'),
             ('AP_NETWORKING_BACKEND_PPP', 'AP_Networking_PPP::init'),
             ('AP_NETWORKING_CAN_MCAST_ENABLED', 'AP_Networking_CAN::start'),
+            ('AP_NETWORKING_CAPTURE_ENABLED', 'AP_Networking_Backend::capture_pbuf'),
+
             ('FORCE_APJ_DEFAULT_PARAMETERS', 'AP_Param::param_defaults_data'),
             ('HAL_BUTTON_ENABLED', 'AP_Button::update'),
             ('HAL_LOGGING_ENABLED', 'AP_Logger::init'),
@@ -298,6 +304,32 @@ class ExtractFeatures(object):
             ('AP_CAN_LOGGING_ENABLED', r'AP_CANManager::can_logging_callback'),
             ('AP_PLANE_SYSTEMID_ENABLED', r'AP_SystemID::start'),
             ('AP_DDS_ENABLED', r'AP_DDS_Client::start'),
+            ('AP_RC_TRANSMITTER_TUNING_ENABLED',  r'Copter::tuning'),
+            ('AP_CPU_IDLE_STATS_ENABLED', r'AP_BoardConfig::use_idle_stats'),
+
+            ('AP_PERIPH_DEVICE_TEMPERATURE_ENABLED', r'AP_Periph_FW::temperature_sensor_update'),
+            ('AP_PERIPH_MSP_ENABLED', r'AP_Periph_FW::msp_init'),
+            ('AP_PERIPH_NOTIFY_ENABLED', r'AP_Periph_FW::handle_notify_state'),
+            ('AP_PERIPH_SERIAL_OPTIONS_ENABLED', r'SerialOptions::init'),
+            ('AP_PERIPH_BATTERY_ENABLED', r'AP_Periph_FW::can_battery_update'),
+            ('AP_PERIPH_RELAY_ENABLED', r'AP_Periph_FW::handle_hardpoint_command'),
+            ('AP_PERIPH_BATTERY_BALANCE_ENABLED', r'AP_Periph_FW::batt_balance_update'),
+            ('AP_PERIPH_BATTERY_TAG_ENABLED', r'BatteryTag::update'),
+            ('AP_PERIPH_PROXIMITY_ENABLED', r'AP_Periph_FW::can_proximity_update'),
+            ('AP_PERIPH_GPS_ENABLED', r'AP_Periph_FW::can_gps_update'),
+            ('AP_PERIPH_ADSB_ENABLED', r'AP_Periph_FW::adsb_update'),
+            ('AP_PERIPH_MAG_ENABLED', r'AP_Periph_FW::can_mag_update'),
+            ('AP_PERIPH_BARO_ENABLED', r'AP_Periph_FW::can_baro_update'),
+            ('AP_PERIPH_RANGEFINDER_ENABLED', r'AP_Periph_FW::can_rangefinder_update'),
+            ('AP_PERIPH_IMU_ENABLED', r'AP_Periph_FW::can_imu_update'),
+            ('AP_PERIPH_RC_OUT_ENABLED', r'AP_Periph_FW::sim_update_actuator'),
+            ('AP_PERIPH_EFI_ENABLED', r'AP_Periph_FW::can_efi_update'),
+            ('AP_PERIPH_RCIN_ENABLED', r'AP_Periph_FW::rcin_update'),
+            ('AP_PERIPH_RPM_ENABLED', r'AP_Periph_FW::rpm_sensor_send'),
+            ('AP_PERIPH_AIRSPEED_ENABLED', r'AP_Periph_FW::can_airspeed_update'),
+
+            ('AP_SCRIPTING_BINDING_VEHICLE_ENABLED', 'AP_Vehicle_index'),
+            ('AP_SCRIPTING_BINDING_MOTORS_ENABLED', 'AP__motors___index'),
         ]
 
     def progress(self, msg):
@@ -311,6 +343,7 @@ class ExtractFeatures(object):
         whitelist = frozenset([
             'HAL_PERIPH_SUPPORT_LONG_CAN_PRINTF',  # this define changes single method body, hard to detect?
             'AP_PLANE_BLACKBOX_LOGGING', # no visible signature
+            'AC_POLYFENCE_CIRCLE_INT_SUPPORT_ENABLED',  # no visible signature
         ])
         for option in build_options.BUILD_OPTIONS:
             if option.define in whitelist:

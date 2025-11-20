@@ -20,7 +20,6 @@
 
 // timeouts for health reporting
 #define BARO_TIMEOUT_MS                 500     // timeout in ms since last successful read
-#define BARO_DATA_CHANGE_TIMEOUT_MS     2000    // timeout in ms since last successful read that involved temperature of pressure changing
 
 class AP_Baro_Backend;
 
@@ -286,7 +285,7 @@ private:
     };
 #endif
 
-    struct sensor {
+    struct {
         uint32_t last_update_ms;        // last update time in ms
         uint32_t last_change_ms;        // last update time in ms that included a change in reading from previous readings
         float pressure;                 // pressure in Pascal

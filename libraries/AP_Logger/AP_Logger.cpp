@@ -101,9 +101,9 @@ const AP_Param::GroupInfo AP_Logger::var_info[] = {
     AP_GROUPINFO("_BACKEND_TYPE",  0, AP_Logger, _params.backend_types,       uint8_t(HAL_LOGGING_BACKENDS_DEFAULT)),
 
     // @Param: _FILE_BUFSIZE
-    // @DisplayName: Logging File and Block Backend buffer size max (in kilobytes)
+    // @DisplayName: Logging File and Block Backend buffer size max (in kibibytes)
     // @Description: The File and Block backends use a buffer to store data before writing to the block device.  Raising this value may reduce "gaps" in your SD card logging but increases memory usage.  This buffer size may be reduced to free up available memory
-    // @Units: kB
+    // @Units: KiB
     // @Range: 4 200
     // @User: Standard
     AP_GROUPINFO("_FILE_BUFSIZE",  1, AP_Logger, _params.file_bufsize,       HAL_LOGGING_FILE_BUFSIZE),
@@ -252,14 +252,18 @@ void AP_Logger::init(const AP_Int32 &log_bitmask, const struct LogStructure *str
 #endif
 };
 
+    uint8_t remaining_types = _params.backend_types;
     for (const auto &backend_config : backend_configs) {
-        if ((_params.backend_types & uint8_t(backend_config.type)) == 0) {
-            continue;
+        uint8_t type = uint8_t(backend_config.type);
+        if ((remaining_types & type) == 0) {
+            continue; // skip if not enabled
         }
+        remaining_types &= ~type; // remember that we processed this type
         if (_next_backend == LOGGER_MAX_BACKENDS) {
-            AP_BoardConfig::config_error("Too many backends");
+            AP_BoardConfig::config_error("Too many logger backends");
             return;
         }
+
         LoggerMessageWriter_DFLogStart *message_writer =
             NEW_NOTHROW LoggerMessageWriter_DFLogStart();
         if (message_writer == nullptr)  {
@@ -270,6 +274,11 @@ void AP_Logger::init(const AP_Int32 &log_bitmask, const struct LogStructure *str
             AP_BoardConfig::allocation_error("logger backend");
         }
         _next_backend++;
+    }
+
+    if (remaining_types) { // there was a type we didn't process
+        AP_BoardConfig::config_error("Unknown logger backend");
+        return;
     }
 
     for (uint8_t i=0; i<_next_backend; i++) {
