@@ -380,14 +380,14 @@ public:
     void handle_log_send();
     bool in_log_download() const;
 
-    float quiet_nanf() const { return NaNf; } // "AR"
-    double quiet_nan() const { return nan("0x4152445550490a"); } // "ARDUPI"
+    static float quiet_nanf() { return NaNf; } // "AR"
+    static double quiet_nan() { return nan("0x4152445550490a"); } // "ARDUPI"
 
     // returns true if msg_type is associated with a message
     bool msg_type_in_use(uint8_t msg_type) const;
 
     // calculate the length of a message using fields specified in
-    // fmt; includes the message header
+    // fmt; includes the message header. returns -1 on on error.
     int16_t Write_calc_msg_len(const char *fmt) const;
 
     // this structure looks much like struct LogStructure in

@@ -85,6 +85,14 @@ public:
     // If false (aka "follow") the gimbal's yaw is maintained in body-frame meaning it will rotate with the vehicle
     void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
 
+    // set pitch_lock used in RC_TARGETING mode.  If true, the gimbal's tilt target is maintained in earth-frame meaning it will lock onto an earth-frame
+    // If false (aka "follow") the gimbal's tilt is maintained in body-frame meaning it will tilt with the vehicle
+    void set_pitch_lock(bool pitch_lock) { _pitch_lock = pitch_lock; }
+
+    // set roll_lock used in RC_TARGETING mode.  If true, the gimbal's roll target is maintained in earth-frame meaning it will lock onto an earth-frame
+    // If false (aka "follow") the gimbal's tilt is maintained in body-frame meaning it will roll with the vehicle
+    void set_roll_lock(bool roll_lock) { _roll_lock = roll_lock; }
+
     // set angle target in degrees
     // roll and pitch are in earth-frame
     // yaw_is_earth_frame (aka yaw_lock) should be true if yaw angle is earth-frame, false if body-frame
@@ -142,8 +150,12 @@ public:
     // get target angle in deg. returns true on success
     bool get_angle_target(float& roll_deg, float& pitch_deg, float& yaw_deg, bool& yaw_is_earth_frame);
 
+#if AP_SCRIPTING_ENABLED
+    // get mount target location. returns true on success
+    bool get_location_target(Location &target_loc);
+#endif
+
     // accessors for scripting backends
-    virtual bool get_location_target(Location &target_loc) { return false; }
     virtual void set_attitude_euler(float roll_deg, float pitch_deg, float yaw_bf_deg) {};
 
     // write mount log packet
@@ -226,6 +238,8 @@ protected:
         float roll;
         float pitch;
         float yaw;
+        bool pitch_is_ef; //only changed and used by CADDX currently
+        bool roll_is_ef; //only changed and used  by CADDX currently
         bool yaw_is_ef;
 
         // return body-frame yaw angle from a mount target (in radians)
@@ -242,11 +256,17 @@ protected:
     enum class Options : uint8_t {
         RCTARGETING_LOCK_FROM_PREVMODE = (1U << 0), // RC_TARGETING mode's lock/follow state maintained from previous mode
         NEUTRAL_ON_RC_FS               = (1U << 1), // move mount to netral position on RC failsafe
+        FPV_LOCK                       = (1U << 2), // if mount supports, force body frame FPV lock on yaw/roll/pitch unconditionally in RC Targeting mode
     };
     bool option_set(Options opt) const { return (_params.options.get() & (uint8_t)opt) != 0; }
 
     // called when mount mode is RC-targetting, updates the mnt_target object from RC inputs:
     void update_mnt_target_from_rc_target();
+
+    // method for the mount backends to call to update mnt_target based on
+    // the mount mode.  Methods in here may be overridden by the derived
+    // class to customise behaviour
+    void update_mnt_target();
 
     // returns true if user has configured a valid roll angle range
     // allows user to disable roll even on 3-axis gimbal
@@ -303,6 +323,11 @@ protected:
         MountTarget rate_rads;      // rate target in rad/s
         uint32_t last_rate_request_ms;
     } mnt_target;
+    
+    // RP earth frame locks accessible by backend
+    bool _pitch_lock = true;              // pitch_lock used in RC_TARGETING mode. True if the gimbal's tilt target is maintained in earth-frame, if false (aka "follow") it is maintained in body-frame
+    bool _roll_lock = true;               // roll_lock used in RC_TARGETING mode. True if the gimbal's roll target is maintained in earth-frame, if false (aka "follow") it is maintained in body-frame
+    
 
 private:
 
@@ -336,11 +361,9 @@ private:
 #endif
 
     Location _roi_target;           // roi target location
-    bool _roi_target_set;           // true if the roi target has been set
 
     uint8_t _target_sysid;          // sysid to track
     Location _target_sysid_location;// sysid target location
-    bool _target_sysid_location_set;// true if _target_sysid has been set
 
     uint32_t _last_warning_ms;      // system time of last warning sent to GCS
 

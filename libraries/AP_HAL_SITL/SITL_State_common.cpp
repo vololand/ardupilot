@@ -42,6 +42,7 @@
 #include <SITL/SIM_RF_USD1_v0.h>
 #include <SITL/SIM_RF_USD1_v1.h>
 #include <SITL/SIM_RF_Wasp.h>
+#include <SITL/SIM_RF_LightWare_GRF.h>
 
 using namespace HALSITL;
 
@@ -62,6 +63,7 @@ static const struct {
     { "leddarone", SITL::RF_LeddarOne::create },
     { "lightwareserial-binary", SITL::RF_LightWareSerialBinary::create },
     { "lightwareserial", SITL::RF_LightWareSerial::create },
+    { "lightware_grf", SITL::RF_LightWareGRF::create },
     { "maxsonarseriallv", SITL::RF_MaxsonarSerialLV::create },
     { "nmea", SITL::RF_NMEA::create },
     { "nmea", SITL::RF_NMEA::create },
@@ -227,7 +229,13 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         if (vectornav != nullptr) {
             AP_HAL::panic("Only one VectorNav at a time");
         }
-        vectornav = NEW_NOTHROW SITL::VectorNav();
+        vectornav = NEW_NOTHROW SITL::VectorNav(SITL::VectorNav::VNModel::VN300);
+        return vectornav;
+    } else if (streq(name, "VectorNav_VN100")) {
+        if (vectornav != nullptr) {
+            AP_HAL::panic("Only one VectorNav at a time");
+        }
+        vectornav = NEW_NOTHROW SITL::VectorNav(SITL::VectorNav::VNModel::VN100);
         return vectornav;
     } else if (streq(name, "MicroStrain5")) {
         if (microstrain5 != nullptr) {

@@ -556,6 +556,22 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     // @User: Standard
     AP_GROUPINFO("APPROACH_DIST", 39, QuadPlane, approach_distance_m, 0),
     
+#if HAL_WITH_ESC_TELEM
+    // @Param: TKOFF_RPM_MIN
+    // @DisplayName: Auto Takeoff Check RPM minimum
+    // @Description: Auto takeoff (in Auto or Guided) is not permitted until motors report at least this RPM. Set to zero to disable check (which also disables Q_TKOFF_RPM_MAX).
+    // @Range: 0 10000
+    // @User: Standard
+    AP_GROUPINFO("TKOFF_RPM_MIN", 40, QuadPlane, takeoff_rpm_min, 0),
+
+    // @Param: TKOFF_RPM_MAX
+    // @DisplayName: Auto Takeoff Check RPM maximum
+    // @Description: Auto takeoff (in Auto or Guided) is not permitted until motors report no more than this RPM. Set to zero to disable check. Q_TKOFF_RPM_MIN must also be set to a non-zero value to enable this check.
+    // @Range: 0 10000
+    // @User: Standard
+    AP_GROUPINFO("TKOFF_RPM_MAX", 41, QuadPlane, takeoff_rpm_max, 0),
+#endif
+
     AP_GROUPEND
 };
 
@@ -1021,7 +1037,8 @@ void QuadPlane::run_z_controller(void)
     }
     if ((now - last_pidz_active_ms) > 20 || !pos_control->is_active_U()) {
         // set vertical speed and acceleration limits
-        pos_control->set_max_speed_accel_U_m(-get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
+        // All limits must be positive
+        pos_control->set_max_speed_accel_U_m(get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
 
         // initialise the vertical position controller
         if (!tailsitter.enabled()) {
@@ -1074,7 +1091,8 @@ void QuadPlane::hold_hover(float target_climb_rate_cms)
     set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
     // set vertical speed and acceleration limits
-    pos_control->set_max_speed_accel_U_m(-get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
+    // All limits must be positive
+    pos_control->set_max_speed_accel_U_m(get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
 
     // call attitude controller
     multicopter_attitude_rate_update(get_desired_yaw_rate_cds(false));
@@ -1896,7 +1914,7 @@ void QuadPlane::update_throttle_hover()
     }
 
     // do not update while climbing or descending
-    if (!is_zero(pos_control->get_vel_desired_NEU_ms().z)) {
+    if (!is_zero(pos_control->get_vel_desired_U_ms())) {
         return;
     }
 
@@ -2605,14 +2623,18 @@ void QuadPlane::vtol_position_controller(void)
                                                   2*position2_dist_threshold_m + stopping_distance_m(rel_groundspeed_sq));
 
                 target_speed_ne_ms = diff_wp_norm * approach_speed_ms;
-                have_target_yaw = true;
-
-                // adjust target yaw angle for wind. We calculate yaw based on the target speed
-                // we want assuming no speed scaling due to direction
+                
+                // adjust target yaw angle into the apparent wind
                 const Vector2f wind_ms = plane.ahrs.wind_estimate().xy();
-                const float gnd_speed_ms = plane.ahrs.groundspeed();
-                Vector2f target_speed_xy = landing_velocity_ne_ms + diff_wp_norm * gnd_speed_ms - wind_ms;
-                target_yaw_deg = degrees(target_speed_xy.angle());
+                const Vector2f airspeed_ne_ms = plane.ahrs.groundspeed_vector() - wind_ms;
+                if (airspeed_ne_ms.length_squared() < 1) {
+                    // Don't cause unpredictable yaw swings if the airspeed vector
+                    // is very small; let the weathervane logic handle it instead.
+                    have_target_yaw = false;
+                } else {
+                    have_target_yaw = true;
+                    target_yaw_deg = degrees(airspeed_ne_ms.angle());
+                }
             }
         }
         const float target_speed_ms = target_speed_ne_ms.length();
@@ -2634,6 +2656,8 @@ void QuadPlane::vtol_position_controller(void)
 
         // use input shaping and abide by accel and jerk limits
         pos_control->input_vel_accel_NE_m(target_speed_ne_ms, target_accel_ne_mss);
+        // During POS1, we only want to control velocity and acceleration
+        pos_control->stop_pos_NE_stabilisation();
 
         // run horizontal velocity controller
         run_xy_controller(MAX(approach_accel_mss, transition_decel_mss)*1.5);
@@ -3074,8 +3098,9 @@ void QuadPlane::setup_target_position(void)
     poscontrol.target_neu_m.z = (plane.next_WP_loc.alt - origin.alt) * 0.01;
 
     // set vertical speed and acceleration limits
-    pos_control->set_max_speed_accel_U_m(-get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
-    pos_control->set_correction_speed_accel_U_m(-get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
+    // All limits must be positive
+    pos_control->set_max_speed_accel_U_m(get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
+    pos_control->set_correction_speed_accel_U_m(get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
 }
 
 /*
@@ -3087,34 +3112,48 @@ void QuadPlane::takeoff_controller(void)
     plane.nav_roll_cd = 0;
     plane.nav_pitch_cd = 0;
 
+#if HAL_WITH_ESC_TELEM
+    // calling this early so it can clear its warning timer when disarmed
+    const bool motor_check_passed = plane.motors_takeoff_check(takeoff_rpm_min, takeoff_rpm_max);
+#endif
+
     if (!plane.arming.is_armed_and_safety_off()) {
         return;
     }
 
     uint32_t now = AP_HAL::millis();
     const auto spool_state = motors->get_desired_spool_state();
-    if (plane.control_mode == &plane.mode_guided && guided_takeoff
-        && tiltrotor.enabled() && !tiltrotor.fully_up() &&
-        spool_state != AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED) {
-        // waiting for motors to tilt up
-        takeoff_start_time_ms = now;
-        return;
-    }
-
-    // don't takeoff up until rudder is re-centered after rudder arming
-    if (plane.arming.last_arm_method() == AP_Arming::Method::RUDDER &&
-        (takeoff_last_run_ms == 0 ||
-         now - takeoff_last_run_ms > 1000) &&
-        !rc().seen_neutral_rudder() &&
-        spool_state <= AP_Motors::DesiredSpoolState::GROUND_IDLE) {
-        // start motor spinning if not spinning already so user sees it is armed
-        set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        takeoff_start_time_ms = now;
-        if (now - plane.takeoff_state.rudder_takeoff_warn_ms > TAKEOFF_RUDDER_WARNING_TIMEOUT) {
-            gcs().send_text(MAV_SEVERITY_WARNING, "Takeoff waiting for rudder release");
-            plane.takeoff_state.rudder_takeoff_warn_ms = now;
+    // Don't allow takeoff until it is safe to do so
+    if (spool_state != AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED) {
+        // Waiting for motors to tilt up
+        if (plane.control_mode == &plane.mode_guided && guided_takeoff
+            && tiltrotor.enabled() && !tiltrotor.fully_up()) {
+            takeoff_start_time_ms = now;
+            return;
         }
-        return;
+#if HAL_WITH_ESC_TELEM
+        // Waiting for motors to reach the expected RPM
+        if (!motor_check_passed) {
+            // start motors spinning if not spinning already so RPM check can work
+            set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
+            takeoff_start_time_ms = now;
+            return;
+        }
+#endif
+        // Waiting for stick to be re-centered after rudder arming
+        if (plane.arming.last_arm_method() == AP_Arming::Method::RUDDER &&
+            (takeoff_last_run_ms == 0 ||
+            now - takeoff_last_run_ms > 1000) &&
+            !rc().seen_neutral_rudder()) {
+            // start motor spinning if not spinning already so user sees it is armed
+            set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
+            takeoff_start_time_ms = now;
+            if (now - plane.takeoff_state.rudder_takeoff_warn_ms > TAKEOFF_RUDDER_WARNING_TIMEOUT) {
+                gcs().send_text(MAV_SEVERITY_WARNING, "Takeoff waiting for rudder release");
+                plane.takeoff_state.rudder_takeoff_warn_ms = now;
+            }
+            return;
+        }
     }
 
 
@@ -3325,8 +3364,9 @@ bool QuadPlane::do_vtol_takeoff(const AP_Mission::Mission_Command& cmd)
     throttle_wait = false;
 
     // set vertical speed and acceleration limits
-    pos_control->set_max_speed_accel_U_m(-get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
-    pos_control->set_correction_speed_accel_U_m(-get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
+    // All limits must be positive
+    pos_control->set_max_speed_accel_U_m(get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
+    pos_control->set_correction_speed_accel_U_m(get_pilot_velocity_z_max_dn_m(), pilot_speed_z_max_up_ms, pilot_accel_z_mss);
 
     // initialise the vertical position controller
     pos_control->init_U_controller();
@@ -4115,7 +4155,7 @@ void QuadPlane::update_throttle_mix(void)
         bool accel_moving = (throttle_mix_accel_ef_filter.get().length() > LAND_CHECK_ACCEL_MOVING);
 
         // check for requested descent
-        bool descent_not_demanded = pos_control->get_vel_desired_NEU_ms().z >= 0.0f;
+        bool descent_not_demanded = pos_control->get_vel_desired_U_ms() >= 0.0f;
 
         bool use_mix_max = large_angle_request || large_angle_error || accel_moving || descent_not_demanded;
 

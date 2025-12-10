@@ -209,12 +209,6 @@ public:
         return AP_AHRS_Backend::airspeed_sensor_enabled(airspeed_index);
     }
 
-    // return a synthetic (equivalent) airspeed estimate (one derived from sensors
-    // other than an actual airspeed sensor), if available. return
-    // true if we have a synthetic airspeed.  ret will not be modified
-    // on failure.
-    bool dcm_synthetic_airspeed_EAS(float &ret) const WARN_IF_UNUSED;
-
     // true if compass is being used
     bool use_compass();
 
@@ -457,11 +451,6 @@ public:
     // set and save the ALT_M_NSE parameter value
     void set_alt_measurement_noise(float noise);
 
-    // get the selected ekf type, for allocation decisions
-    int8_t get_ekf_type(void) const {
-        return _ekf_type;
-    }
-
     enum class EKFType : uint8_t {
 #if AP_AHRS_DCM_ENABLED
         DCM = 0,
@@ -479,6 +468,10 @@ public:
         EXTERNAL = 11,
 #endif
     };
+
+    // returns a canonicalised and valid EKFType, as opposed to the raw
+    // parameter value which may be any value the user has set
+    EKFType configured_ekf_type(void) const;
 
     // set the selected ekf type, for RC aux control
     void set_ekf_type(EKFType ahrs_type) {
@@ -812,7 +805,6 @@ private:
     uint32_t start_time_ms;
     uint8_t _ekf_flags; // bitmask from Flags enumeration
 
-    EKFType ekf_type(void) const;
     void update_DCM();
 
     /*
