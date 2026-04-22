@@ -295,6 +295,8 @@ AP_HW_BETAFPV_F4_2-3S_20A            1175
 AP_HW_FlywooF405HD_AIOv2             1180
 AP_HW_FlywooH743Pro                  1181
 
+AP_HW_NarinX3                        1199
+
 AP_HW_ESP32_PERIPH                   1205
 AP_HW_ESP32S3_PERIPH                 1206
 
