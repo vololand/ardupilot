@@ -87,7 +87,7 @@ static int new_file_descriptor(const char *pathname)
                 errno = ENOMEM;
                 return -1;
             }
-            strcpy(fname, pathname);
+            memcpy(fname, pathname, strlen(pathname) + 1U);
             stream->name = fname;
 
             file_table[i]  = stream;

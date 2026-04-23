@@ -177,12 +177,25 @@ void AP_AIS::update()
                 }
 
                 // combine packets
-                char multi[AIVDM_PAYLOAD_SIZE*_incoming.total];
-                strncpy(multi,_AIVDM_buffer[msg_parts[0]].payload,AIVDM_PAYLOAD_SIZE);
+                char multi[AIVDM_PAYLOAD_SIZE * _incoming.total];
+                multi[0] = '\0';
+                size_t multi_len = 0;
+                const auto append_payload = [&](const char *src) {
+                    const size_t max_len = sizeof(multi) - 1U;
+                    if (multi_len >= max_len) {
+                        return;
+                    }
+                    const size_t src_len = strnlen(src, AIVDM_PAYLOAD_SIZE);
+                    const size_t copy_len = MIN(src_len, max_len - multi_len);
+                    memcpy(&multi[multi_len], src, copy_len);
+                    multi_len += copy_len;
+                    multi[multi_len] = '\0';
+                };
+                append_payload(_AIVDM_buffer[msg_parts[0]].payload);
                 for (uint8_t i = 1; i < _incoming.total - 1; i++) {
-                    strncat(multi,_AIVDM_buffer[msg_parts[i]].payload,sizeof(multi));
+                    append_payload(_AIVDM_buffer[msg_parts[i]].payload);
                 }
-                strncat(multi,_incoming.payload,sizeof(multi));
+                append_payload(_incoming.payload);
 #if HAL_LOGGING_ENABLED
                 const bool decoded = payload_decode(multi);
 #endif
@@ -869,7 +882,8 @@ bool AP_AIS::decode_latest_term()
             if (strlen(_term) == 0) {
                 _sentence_valid = false;
             } else {
-                strcpy(_incoming.payload,_term);
+                strncpy_noterm(_incoming.payload, _term, sizeof(_incoming.payload) - 1U);
+                _incoming.payload[sizeof(_incoming.payload) - 1U] = '\0';
             }
             break;
 

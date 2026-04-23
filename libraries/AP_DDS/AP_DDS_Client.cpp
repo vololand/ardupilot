@@ -285,8 +285,8 @@ void AP_DDS_Client::populate_static_transforms(tf2_msgs_msg_TFMessage& msg)
         char gps_frame_id[16];
         //! @todo should GPS frame ID's be 0 or 1 indexed in ROS?
         hal.util->snprintf(gps_frame_id, sizeof(gps_frame_id), "GPS_%u", i);
-        strcpy(msg.transforms[i].header.frame_id, BASE_LINK_FRAME_ID);
-        strcpy(msg.transforms[i].child_frame_id, gps_frame_id);
+        hal.util->snprintf(msg.transforms[i].header.frame_id, sizeof(msg.transforms[i].header.frame_id), "%s", BASE_LINK_FRAME_ID);
+        hal.util->snprintf(msg.transforms[i].child_frame_id, sizeof(msg.transforms[i].child_frame_id), "%s", gps_frame_id);
         // The body-frame offsets
         // X - Forward
         // Y - Right
@@ -388,7 +388,7 @@ void AP_DDS_Client::update_topic(sensor_msgs_msg_BatteryState& msg, const uint8_
 void AP_DDS_Client::update_topic(geometry_msgs_msg_PoseStamped& msg)
 {
     update_topic(msg.header.stamp);
-    strcpy(msg.header.frame_id, BASE_LINK_FRAME_ID);
+    hal.util->snprintf(msg.header.frame_id, sizeof(msg.header.frame_id), "%s", BASE_LINK_FRAME_ID);
 
     auto &ahrs = AP::ahrs();
     WITH_SEMAPHORE(ahrs.get_semaphore());
@@ -439,7 +439,7 @@ void AP_DDS_Client::update_topic(geometry_msgs_msg_PoseStamped& msg)
 void AP_DDS_Client::update_topic(geometry_msgs_msg_TwistStamped& msg)
 {
     update_topic(msg.header.stamp);
-    strcpy(msg.header.frame_id, BASE_LINK_FRAME_ID);
+    hal.util->snprintf(msg.header.frame_id, sizeof(msg.header.frame_id), "%s", BASE_LINK_FRAME_ID);
 
     auto &ahrs = AP::ahrs();
     WITH_SEMAPHORE(ahrs.get_semaphore());
@@ -482,7 +482,7 @@ void AP_DDS_Client::update_topic(geometry_msgs_msg_TwistStamped& msg)
 bool AP_DDS_Client::update_topic(geometry_msgs_msg_Vector3Stamped& msg)
 {
     update_topic(msg.header.stamp);
-    strcpy(msg.header.frame_id, BASE_LINK_FRAME_ID);
+    hal.util->snprintf(msg.header.frame_id, sizeof(msg.header.frame_id), "%s", BASE_LINK_FRAME_ID);
     auto &ahrs = AP::ahrs();
     WITH_SEMAPHORE(ahrs.get_semaphore());
     // In ROS REP 103, axis orientation uses the following convention:
@@ -511,7 +511,7 @@ bool AP_DDS_Client::update_topic(geometry_msgs_msg_Vector3Stamped& msg)
 void AP_DDS_Client::update_topic(geographic_msgs_msg_GeoPoseStamped& msg)
 {
     update_topic(msg.header.stamp);
-    strcpy(msg.header.frame_id, BASE_LINK_FRAME_ID);
+    hal.util->snprintf(msg.header.frame_id, sizeof(msg.header.frame_id), "%s", BASE_LINK_FRAME_ID);
 
     auto &ahrs = AP::ahrs();
     WITH_SEMAPHORE(ahrs.get_semaphore());
@@ -552,7 +552,7 @@ void AP_DDS_Client::update_topic(geographic_msgs_msg_GeoPoseStamped& msg)
 void AP_DDS_Client::update_topic(sensor_msgs_msg_Imu& msg)
 {
     update_topic(msg.header.stamp);
-    strcpy(msg.header.frame_id, BASE_LINK_NED_FRAME_ID);
+    hal.util->snprintf(msg.header.frame_id, sizeof(msg.header.frame_id), "%s", BASE_LINK_NED_FRAME_ID);
 
     auto &imu = AP::ins();
     auto &ahrs = AP::ahrs();
@@ -599,7 +599,7 @@ void AP_DDS_Client::update_topic(rosgraph_msgs_msg_Clock& msg)
 void AP_DDS_Client::update_topic(geographic_msgs_msg_GeoPointStamped& msg)
 {
     update_topic(msg.header.stamp);
-    strcpy(msg.header.frame_id, BASE_LINK_FRAME_ID);
+    hal.util->snprintf(msg.header.frame_id, sizeof(msg.header.frame_id), "%s", BASE_LINK_FRAME_ID);
 
     auto &ahrs = AP::ahrs();
     WITH_SEMAPHORE(ahrs.get_semaphore());

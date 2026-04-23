@@ -279,8 +279,8 @@ void WiFiDriver::initialize_wifi()
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
 
-    strcpy((char *)wifi_config.ap.ssid, WIFI_SSID);
-    strcpy((char *)wifi_config.ap.password, WIFI_PWD);
+    hal.util->snprintf((char *)wifi_config.ap.ssid, sizeof(wifi_config.ap.ssid), "%s", WIFI_SSID);
+    hal.util->snprintf((char *)wifi_config.ap.password, sizeof(wifi_config.ap.password), "%s", WIFI_PWD);
     wifi_config.ap.ssid_len = strlen(WIFI_SSID),
     wifi_config.ap.max_connection = WIFI_MAX_CONNECTION,
     wifi_config.ap.authmode = WIFI_AUTH_WPA2_PSK;
@@ -327,8 +327,8 @@ void WiFiDriver::initialize_wifi()
                                                         NULL,
                                                         &instance_got_ip));
 
-    strcpy((char *)wifi_config.sta.ssid, WIFI_SSID_STATION);
-    strcpy((char *)wifi_config.sta.password, WIFI_PWD);
+    hal.util->snprintf((char *)wifi_config.sta.ssid, sizeof(wifi_config.sta.ssid), "%s", WIFI_SSID_STATION);
+    hal.util->snprintf((char *)wifi_config.sta.password, sizeof(wifi_config.sta.password), "%s", WIFI_PWD);
     wifi_config.sta.threshold.authmode = WIFI_AUTH_OPEN;
     wifi_config.sta.sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
 

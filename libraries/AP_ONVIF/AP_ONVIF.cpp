@@ -140,8 +140,8 @@ bool AP_ONVIF::start(const char *user, const char *pass, const char *hostname)
         return false;
     }
 
-    strcpy(username, user);
-    strcpy(password, pass);
+    hal.util->snprintf(username, username_len + 1, "%s", user);
+    hal.util->snprintf(password, password_len + 1, "%s", pass);
     snprintf(device_endpoint, hostname_len + strlen(DEVICE_ENDPOINT_LOC) + 1, "%s" DEVICE_ENDPOINT_LOC, hostname);
     snprintf(media_endpoint, hostname_len + strlen(MEDIA_ENDPOINT_LOC) + 1, "%s" MEDIA_ENDPOINT_LOC, hostname);
     snprintf(ptz_endpoint, hostname_len + strlen(PTZ_ENDPOINT_LOC) + 1, "%s" PTZ_ENDPOINT_LOC, hostname);
@@ -278,7 +278,7 @@ bool AP_ONVIF::probe_onvif_server()
             }
         }
 
-        strcpy(profile_token, GetProfilesResponse.Profiles[0]->token);
+        hal.util->snprintf(profile_token, profile_token_size, "%s", GetProfilesResponse.Profiles[0]->token);
 
         proxy_ptz->soap_endpoint = ptz_endpoint;
     }

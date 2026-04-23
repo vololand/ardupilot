@@ -271,7 +271,7 @@ uint8_t AP_Filesystem_Param::pack_param(const struct rfile &r, struct cursor &c,
     }
 #endif
 
-    strcpy(c.last_name, name);
+    memcpy(c.last_name, name, sizeof(c.last_name));
 
     return packed_len;
 }

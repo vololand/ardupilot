@@ -37,6 +37,7 @@
 #include <sys/time.h>
 #include <net/if.h>
 #include <linux/can/raw.h>
+#include <cstdio>
 #include <cstring>
 #include "Scheduler.h"
 #include <AP_CANManager/AP_CANManager.h>
@@ -466,9 +467,9 @@ bool CANIface::init(const uint32_t bitrate, const OperatingMode mode)
 {
     char iface_name[16];
 #if HAL_LINUX_USE_VIRTUAL_CAN
-    sprintf(iface_name, "vcan%u", _self_index);
+    snprintf(iface_name, sizeof(iface_name), "vcan%u", _self_index);
 #else
-    sprintf(iface_name, "can%u", _self_index);
+    snprintf(iface_name, sizeof(iface_name), "can%u", _self_index);
 #endif
     if (_initialized) {
         return _initialized;

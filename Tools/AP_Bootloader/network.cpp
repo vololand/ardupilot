@@ -317,11 +317,13 @@ BL_Network::web_var BL_Network::variables[] = {
 char *BL_Network::substitute_vars(const char *str, uint32_t size)
 {
     // assume 1024 is enough room for new variables
-    char *result = (char *)malloc(strlen(str) + 1024);
+    const size_t result_size = strlen(str) + 1024U;
+    char *result = (char *)malloc(result_size);
     if (result == nullptr) {
         return nullptr;
     }
     char *p = result;
+    char *const end = result + result_size;
     const char *str0 = str;
     while (*str && str-str0<size) {
         if (*str != '{') {
@@ -338,8 +340,16 @@ char *BL_Network::substitute_vars(const char *str, uint32_t size)
         for (auto &v : variables) {
             if (strlen(v.name) == len && strncmp(v.name, str+1, len) == 0) {
                 found = true;
-                strcpy(p, v.value);
-                p += strlen(v.value);
+                const size_t remaining = size_t(end - p);
+                if (remaining <= 1U) {
+                    *p = '\0';
+                    return result;
+                }
+                const size_t value_len = strlen(v.value);
+                const size_t copy_len = MIN(value_len, remaining - 1U);
+                memcpy(p, v.value, copy_len);
+                p += copy_len;
+                *p = '\0';
                 str = q+1;
                 break;
             }

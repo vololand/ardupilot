@@ -305,11 +305,9 @@ int AP_Logger_Write(lua_State *L) {
 
     // prepend timestamp to format and labels
     char label_cat[LS_LABELS_SIZE];
-    strcpy(label_cat,"TimeUS,");
-    strcat(label_cat,labels);
+    hal.util->snprintf(label_cat, sizeof(label_cat), "TimeUS,%s", labels);
     char fmt_cat[LS_FORMAT_SIZE];
-    strcpy(fmt_cat,"Q");
-    strcat(fmt_cat,fmt);
+    hal.util->snprintf(fmt_cat, sizeof(fmt_cat), "Q%s", fmt);
 
     // Need to declare these here so they don't go out of scope
     char units_cat[LS_FORMAT_SIZE];
@@ -335,11 +333,9 @@ int AP_Logger_Write(lua_State *L) {
         }
 
         // prepend timestamp to units and multiplyers
-        strcpy(units_cat,"s");
-        strcat(units_cat,units);
+        hal.util->snprintf(units_cat, sizeof(units_cat), "s%s", units);
 
-        strcpy(multipliers_cat,"F");
-        strcat(multipliers_cat,multipliers);
+        hal.util->snprintf(multipliers_cat, sizeof(multipliers_cat), "F%s", multipliers);
 
         // ask for a mesage type
         f = AP_logger->msg_fmt_for_name(name, label_cat, units_cat, multipliers_cat, fmt_cat, true, true);

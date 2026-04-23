@@ -65,7 +65,8 @@ void string_substitute(const char *str, char *str2)
         new_len += 24 - strlen(serial);
     }
     if (new_len+1 > USB_DESC_MAX_STRLEN) {
-        strcpy(str2, str);
+        strncpy(str2, str, USB_DESC_MAX_STRLEN - 1);
+        str2[USB_DESC_MAX_STRLEN - 1] = '\0';
         return;
     }
     char *p = str2;
