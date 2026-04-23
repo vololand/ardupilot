@@ -9,6 +9,7 @@
  */
 
 #include <AP_InternalError/AP_InternalError.h>
+#include <limits.h>
 #include <stdlib.h>
 
 /*
@@ -34,17 +35,23 @@ struct heap {
 
 void *MultiHeap::heap_create(uint32_t size)
 {
-    struct heap *new_heap = (struct heap*)malloc(sizeof(struct heap));
-    if (new_heap != nullptr) {
-        new_heap->max_heap_size = size;
+    auto *new_heap = static_cast<struct heap *>(malloc(sizeof(struct heap)));
+    if (new_heap == nullptr) {
+        return nullptr;
     }
     new_heap->magic = HEAP_MAGIC;
-    return (void *)new_heap;
+    new_heap->max_heap_size = size;
+    new_heap->current_heap_usage = 0;
+    return new_heap;
 }
 
 void MultiHeap::heap_destroy(void *heap_ptr)
 {
-    struct heap *heapp = (struct heap*)heap_ptr;
+    if (heap_ptr == nullptr) {
+        return;
+    }
+
+    auto *heapp = static_cast<struct heap *>(heap_ptr);
     if (heapp->magic != HEAP_MAGIC) {
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
         return;
@@ -71,20 +78,24 @@ void *MultiHeap::heap_allocate(void *heap_ptr, uint32_t size)
     if (heap_ptr == nullptr || size == 0) {
         return nullptr;
     }
-    struct heap *heapp = (struct heap*)heap_ptr;
+    auto *heapp = static_cast<struct heap *>(heap_ptr);
     if (heapp->magic != HEAP_MAGIC) {
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
         return nullptr;
     }
 
-    if (heapp->current_heap_usage + size > heapp->max_heap_size) {
+    if (size > (heapp->max_heap_size - heapp->current_heap_usage)) {
         // fail the allocation as we don't have the memory. Note that
         // we don't simulate the fragmentation that we would get with
         // HAL_ChibiOS
         return nullptr;
     }
 
-    auto *header = (heap_allocation_header *)malloc(size + sizeof(heap_allocation_header));
+    if (size > (UINT32_MAX - sizeof(heap_allocation_header))) {
+        return nullptr;
+    }
+
+    auto *header = static_cast<heap_allocation_header *>(malloc(size + sizeof(heap_allocation_header)));
     if (header == nullptr) {
         // can't allocate the new memory
         return nullptr;
@@ -102,14 +113,22 @@ void *MultiHeap::heap_allocate(void *heap_ptr, uint32_t size)
  */
 void MultiHeap::heap_free(void *ptr)
 {
+    if (ptr == nullptr) {
+        return;
+    }
+
     // extract header
-    auto *header = ((struct heap_allocation_header *)ptr)-1;
+    auto *header = (static_cast<struct heap_allocation_header *>(ptr)) - 1;
     auto *heapp = header->hp;
     if (heapp->magic != HEAP_MAGIC) {
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
         return;
     }
     const uint32_t size = header->allocation_size;
+    if (heapp->current_heap_usage < size) {
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        return;
+    }
     heapp->current_heap_usage -= size;
 
     // free the memory

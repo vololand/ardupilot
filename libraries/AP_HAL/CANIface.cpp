@@ -108,10 +108,10 @@ bool AP_HAL::CANIface::register_frame_callback(FrameCb cb, uint8_t &callback_id)
 #ifndef HAL_BOOTLOADER_BUILD
     WITH_SEMAPHORE(callbacks.sem);
 #endif
-    for (uint8_t i=0; i<ARRAY_SIZE(callbacks.cb); i++) {
+    for (uint32_t i = 0; i < ARRAY_SIZE(callbacks.cb); i++) {
         if (callbacks.cb[i] == nullptr) {
             callbacks.cb[i] = cb;
-            callback_id = i+1;
+            callback_id = static_cast<uint8_t>(i + 1U);
             return true;
         }
     }

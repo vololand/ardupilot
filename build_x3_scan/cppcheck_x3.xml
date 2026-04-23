@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<results version="2">
+    <cppcheck version="2.7"/>
+    <errors>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;QuaternionT&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;QuaternionT&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_Math/quaternion.h" line="44" column="5"/>
+            <symbol>QuaternionT</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;ObjectBuffer &lt; float &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;ObjectBuffer &lt; float &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/RingBuffer.h" line="125" column="5"/>
+            <symbol>ObjectBuffer &lt; float &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h" line="43" column="5"/>
+            <symbol>OwnPtr &lt; SPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h" line="50" column="5"/>
+            <symbol>OwnPtr &lt; SPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h" line="52" column="5"/>
+            <symbol>OwnPtr &lt; SPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h" line="43" column="5"/>
+            <symbol>OwnPtr &lt; WSPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h" line="50" column="5"/>
+            <symbol>OwnPtr &lt; WSPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h" line="52" column="5"/>
+            <symbol>OwnPtr &lt; WSPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void , uint8_t , bool , uint32_t &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void , uint8_t , bool , uint32_t &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; void , uint8_t , bool , uint32_t &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; void &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; bool , uint8_t &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; bool , uint8_t &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; bool , uint8_t &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h" line="38" column="15"/>
+            <symbol>Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;</symbol>
+        </error>
+        <error id="preprocessorErrorDirective" severity="error" msg="#error Unknown compiler." verbose="#error Unknown compiler.">
+            <location file="/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/modules/ChibiOS/os/common/ext/ARM/CMSIS/Core/Include/cmsis_compiler.h" line="261" column="0"/>
+        </error>
+    </errors>
+</results>

@@ -78,13 +78,13 @@ public:
     }
 
     // test for equality
-    bool operator        == (const Matrix3<T> &m)
+    bool operator        == (const Matrix3<T> &m) const
     {
         return (a==m.a && b==m.b && c==m.c);
     }
 
     // test for inequality
-    bool operator        != (const Matrix3<T> &m)
+    bool operator        != (const Matrix3<T> &m) const
     {
         return (a!=m.a || b!=m.b || c!=m.c);
     }
@@ -220,7 +220,9 @@ public:
 
     // zero the matrix
     void        zero(void) {
-        memset((void*)this, 0, sizeof(*this));
+        a.zero();
+        b.zero();
+        c.zero();
     }
 
     // setup the identity matrix
@@ -230,7 +232,7 @@ public:
     }
 
     // check if any elements are NAN
-    bool        is_nan(void) WARN_IF_UNUSED
+    bool        is_nan(void) const WARN_IF_UNUSED
     {
         return a.is_nan() || b.is_nan() || c.is_nan();
     }

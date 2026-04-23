@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<results version="2">
+    <cppcheck version="2.7"/>
+    <errors>
+        <error id="objectIndex" severity="warning" msg="The address of local variable &apos;x&apos; might be accessed at non-zero index." verbose="The address of local variable &apos;x&apos; might be accessed at non-zero index." cwe="758" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/vector2.h" line="128" column="18"/>
+            <location file="libraries/AP_Math/vector2.h" line="124" column="17" info="Address of variable taken here."/>
+        </error>
+        <error id="objectIndex" severity="warning" msg="The address of local variable &apos;x&apos; might be accessed at non-zero index." verbose="The address of local variable &apos;x&apos; might be accessed at non-zero index." cwe="758" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/vector2.h" line="136" column="18"/>
+            <location file="libraries/AP_Math/vector2.h" line="132" column="23" info="Address of variable taken here."/>
+        </error>
+        <error id="objectIndex" severity="warning" msg="The address of local variable &apos;x&apos; might be accessed at non-zero index." verbose="The address of local variable &apos;x&apos; might be accessed at non-zero index." cwe="758" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/vector3.h" line="141" column="18"/>
+            <location file="libraries/AP_Math/vector3.h" line="137" column="17" info="Address of variable taken here."/>
+        </error>
+        <error id="objectIndex" severity="warning" msg="The address of local variable &apos;x&apos; might be accessed at non-zero index." verbose="The address of local variable &apos;x&apos; might be accessed at non-zero index." cwe="758" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/vector3.h" line="149" column="18"/>
+            <location file="libraries/AP_Math/vector3.h" line="145" column="23" info="Address of variable taken here."/>
+        </error>
+        <error id="memsetClassFloat" severity="portability" msg="Using memset() on class which contains a floating point number." verbose="Using memset() on class which contains a floating point number. This is not portable because memset() sets each byte of a block of memory to a specific value and the actual representation of a floating-point value is implementation defined. Note: In case of an IEEE754-1985 compatible implementation setting all bits to zero results in the value 0.0." cwe="758" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/matrix3.h" line="223" column="9"/>
+        </error>
+        <error id="noConstructor" severity="style" msg="The class &apos;PWMSource&apos; does not declare a constructor although it has private member variables which likely require initialization." verbose="The class &apos;PWMSource&apos; does not declare a constructor although it has private member variables. Member variables of builtin types are left uninitialized when the class is instantiated. That may cause bugs or undefined behavior." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/GPIO.h" line="19" column="1"/>
+            <symbol>PWMSource</symbol>
+        </error>
+        <error id="uninitMemberVar" severity="warning" msg="Member variable &apos;WSPIDevice::_trx_flags&apos; is not initialized in the constructor." verbose="Member variable &apos;WSPIDevice::_trx_flags&apos; is not initialized in the constructor." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/WSPIDevice.h" line="139" column="5"/>
+            <symbol>WSPIDevice::_trx_flags</symbol>
+        </error>
+        <error id="uninitMemberVar" severity="warning" msg="Member variable &apos;UARTDriver::lock_write_key&apos; is not initialized in the constructor." verbose="Member variable &apos;UARTDriver::lock_write_key&apos; is not initialized in the constructor." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/UARTDriver.h" line="23" column="5"/>
+            <symbol>UARTDriver::lock_write_key</symbol>
+        </error>
+        <error id="uninitMemberVar" severity="warning" msg="Member variable &apos;UARTDriver::lock_read_key&apos; is not initialized in the constructor." verbose="Member variable &apos;UARTDriver::lock_read_key&apos; is not initialized in the constructor." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/UARTDriver.h" line="23" column="5"/>
+            <symbol>UARTDriver::lock_read_key</symbol>
+        </error>
+        <error id="uninitMemberVar" severity="warning" msg="Member variable &apos;UARTDriver::parity&apos; is not initialized in the constructor." verbose="Member variable &apos;UARTDriver::parity&apos; is not initialized in the constructor." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/UARTDriver.h" line="23" column="5"/>
+            <symbol>UARTDriver::parity</symbol>
+        </error>
+        <error id="uninitMemberVar" severity="warning" msg="Member variable &apos;UARTDriver::_last_options&apos; is not initialized in the constructor." verbose="Member variable &apos;UARTDriver::_last_options&apos; is not initialized in the constructor." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/UARTDriver.h" line="23" column="5"/>
+            <symbol>UARTDriver::_last_options</symbol>
+        </error>
+        <error id="noConstructor" severity="style" msg="The class &apos;ByteTracker&apos; does not declare a constructor although it has private member variables which likely require initialization." verbose="The class &apos;ByteTracker&apos; does not declare a constructor although it has private member variables. Member variables of builtin types are left uninitialized when the class is instantiated. That may cause bugs or undefined behavior." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/UARTDriver.h" line="165" column="9"/>
+            <symbol>ByteTracker</symbol>
+        </error>
+        <error id="uninitMemberVar" severity="warning" msg="Member variable &apos;Scheduler::_min_delay_cb_ms&apos; is not initialized in the constructor." verbose="Member variable &apos;Scheduler::_min_delay_cb_ms&apos; is not initialized in the constructor." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/Scheduler.h" line="13" column="5"/>
+            <symbol>Scheduler::_min_delay_cb_ms</symbol>
+        </error>
+        <error id="uninitMemberVar" severity="warning" msg="Member variable &apos;Scheduler::_delay_cb&apos; is not initialized in the constructor." verbose="Member variable &apos;Scheduler::_delay_cb&apos; is not initialized in the constructor." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/Scheduler.h" line="13" column="5"/>
+            <symbol>Scheduler::_delay_cb</symbol>
+        </error>
+        <error id="uninitMemberVar" severity="warning" msg="Member variable &apos;Scheduler::_in_delay_callback&apos; is not initialized in the constructor." verbose="Member variable &apos;Scheduler::_in_delay_callback&apos; is not initialized in the constructor." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/Scheduler.h" line="13" column="5"/>
+            <symbol>Scheduler::_in_delay_callback</symbol>
+        </error>
+        <error id="noConstructor" severity="style" msg="The class &apos;MultiHeap&apos; does not declare a constructor although it has private member variables which likely require initialization." verbose="The class &apos;MultiHeap&apos; does not declare a constructor although it has private member variables. Member variables of builtin types are left uninitialized when the class is instantiated. That may cause bugs or undefined behavior." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_MultiHeap/AP_MultiHeap.h" line="17" column="1"/>
+            <symbol>MultiHeap</symbol>
+        </error>
+        <error id="useInitializationList" severity="performance" msg="Variable &apos;q1&apos; is assigned in constructor body. Consider performing initialization in initialization list." verbose="When an object of a class is created, the constructors of all member variables are called consecutively in the order the variables are declared, even if you don&apos;t explicitly write them to the initialization list. You could avoid assigning &apos;q1&apos; a value by passing the value to the constructor in the initialization list." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/quaternion.h" line="37" column="9"/>
+            <symbol>q1</symbol>
+        </error>
+        <error id="useInitializationList" severity="performance" msg="Variable &apos;q2&apos; is assigned in constructor body. Consider performing initialization in initialization list." verbose="When an object of a class is created, the constructors of all member variables are called consecutively in the order the variables are declared, even if you don&apos;t explicitly write them to the initialization list. You could avoid assigning &apos;q2&apos; a value by passing the value to the constructor in the initialization list." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/quaternion.h" line="38" column="9"/>
+            <symbol>q2</symbol>
+        </error>
+        <error id="useInitializationList" severity="performance" msg="Variable &apos;q3&apos; is assigned in constructor body. Consider performing initialization in initialization list." verbose="When an object of a class is created, the constructors of all member variables are called consecutively in the order the variables are declared, even if you don&apos;t explicitly write them to the initialization list. You could avoid assigning &apos;q3&apos; a value by passing the value to the constructor in the initialization list." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/quaternion.h" line="38" column="14"/>
+            <symbol>q3</symbol>
+        </error>
+        <error id="useInitializationList" severity="performance" msg="Variable &apos;q4&apos; is assigned in constructor body. Consider performing initialization in initialization list." verbose="When an object of a class is created, the constructors of all member variables are called consecutively in the order the variables are declared, even if you don&apos;t explicitly write them to the initialization list. You could avoid assigning &apos;q4&apos; a value by passing the value to the constructor in the initialization list." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/quaternion.h" line="38" column="19"/>
+            <symbol>q4</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;DSP::FFTWindowState::get_freq_bin&apos; can be const." verbose="The member function &apos;DSP::FFTWindowState::get_freq_bin&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/DSP.h" line="87" column="15"/>
+            <symbol>DSP::FFTWindowState::get_freq_bin</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;CANIface::get_operating_mode&apos; can be const." verbose="The member function &apos;CANIface::get_operating_mode&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/CANIface.h" line="123" column="19"/>
+            <symbol>CANIface::get_operating_mode</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;AP_ParamA::operator[]&apos; can be const." verbose="The member function &apos;AP_ParamA::operator[]&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Param/AP_Param.h" line="1026" column="15"/>
+            <symbol>AP_ParamA::operator[]</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;AP_ParamA::operator[]&apos; can be const." verbose="The member function &apos;AP_ParamA::operator[]&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Param/AP_Param.h" line="1030" column="15"/>
+            <symbol>AP_ParamA::operator[]</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Matrix3 &lt; double &gt;::operator==&apos; can be const." verbose="The member function &apos;Matrix3 &lt; double &gt;::operator==&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/matrix3.h" line="81" column="10"/>
+            <symbol>Matrix3 &lt; double &gt;::operator==</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Matrix3 &lt; double &gt;::operator!=&apos; can be const." verbose="The member function &apos;Matrix3 &lt; double &gt;::operator!=&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/matrix3.h" line="87" column="10"/>
+            <symbol>Matrix3 &lt; double &gt;::operator!=</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Matrix3 &lt; double &gt;::is_nan&apos; can be const." verbose="The member function &apos;Matrix3 &lt; double &gt;::is_nan&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/matrix3.h" line="233" column="17"/>
+            <symbol>Matrix3 &lt; double &gt;::is_nan</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Matrix3 &lt; float &gt;::operator==&apos; can be const." verbose="The member function &apos;Matrix3 &lt; float &gt;::operator==&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/matrix3.h" line="81" column="10"/>
+            <symbol>Matrix3 &lt; float &gt;::operator==</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Matrix3 &lt; float &gt;::operator!=&apos; can be const." verbose="The member function &apos;Matrix3 &lt; float &gt;::operator!=&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/matrix3.h" line="87" column="10"/>
+            <symbol>Matrix3 &lt; float &gt;::operator!=</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Matrix3 &lt; float &gt;::is_nan&apos; can be const." verbose="The member function &apos;Matrix3 &lt; float &gt;::is_nan&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/matrix3.h" line="233" column="17"/>
+            <symbol>Matrix3 &lt; float &gt;::is_nan</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; void , uint8_t , bool , uint32_t &gt;::operator==&apos; can be const." verbose="The member function &apos;Functor &lt; void , uint8_t , bool , uint32_t &gt;::operator==&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="59" column="17"/>
+            <symbol>Functor &lt; void , uint8_t , bool , uint32_t &gt;::operator==</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; void , uint8_t , bool , uint32_t &gt;::operator!=&apos; can be const." verbose="The member function &apos;Functor &lt; void , uint8_t , bool , uint32_t &gt;::operator!=&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="63" column="17"/>
+            <symbol>Functor &lt; void , uint8_t , bool , uint32_t &gt;::operator!=</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;::operator==&apos; can be const." verbose="The member function &apos;Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;::operator==&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="59" column="17"/>
+            <symbol>Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;::operator==</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;::operator!=&apos; can be const." verbose="The member function &apos;Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;::operator!=&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="63" column="17"/>
+            <symbol>Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;::operator!=</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; void &gt;::operator==&apos; can be const." verbose="The member function &apos;Functor &lt; void &gt;::operator==&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="59" column="17"/>
+            <symbol>Functor &lt; void &gt;::operator==</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; void &gt;::operator!=&apos; can be const." verbose="The member function &apos;Functor &lt; void &gt;::operator!=&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="63" column="17"/>
+            <symbol>Functor &lt; void &gt;::operator!=</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; bool , uint8_t &gt;::operator==&apos; can be const." verbose="The member function &apos;Functor &lt; bool , uint8_t &gt;::operator==&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="59" column="17"/>
+            <symbol>Functor &lt; bool , uint8_t &gt;::operator==</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; bool , uint8_t &gt;::operator!=&apos; can be const." verbose="The member function &apos;Functor &lt; bool , uint8_t &gt;::operator!=&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="63" column="17"/>
+            <symbol>Functor &lt; bool , uint8_t &gt;::operator!=</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;::operator==&apos; can be const." verbose="The member function &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;::operator==&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="59" column="17"/>
+            <symbol>Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;::operator==</symbol>
+        </error>
+        <error id="functionConst" severity="style" msg="Technically the member function &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;::operator!=&apos; can be const." verbose="The member function &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;::operator!=&apos; can be made a const function. Making this function &apos;const&apos; should not cause compiler errors. Even though the function can be made const function technically it may not make sense conceptually. Think about your design and the task of the function first - is it a function that must not change object internal state?" cwe="398" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="63" column="17"/>
+            <symbol>Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;::operator!=</symbol>
+        </error>
+        <error id="noCopyConstructor" severity="warning" msg="Class &apos;ObjectArray&apos; does not have a copy constructor which is recommended since it has dynamic memory/resource allocation(s)." verbose="Class &apos;ObjectArray&apos; does not have a copy constructor which is recommended since it has dynamic memory/resource allocation(s)." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="475" column="9"/>
+            <symbol>ObjectArray</symbol>
+        </error>
+        <error id="noOperatorEq" severity="warning" msg="Class &apos;ObjectArray&apos; does not have a operator= which is recommended since it has dynamic memory/resource allocation(s)." verbose="Class &apos;ObjectArray&apos; does not have a operator= which is recommended since it has dynamic memory/resource allocation(s)." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="475" column="9"/>
+            <symbol>ObjectArray</symbol>
+        </error>
+        <error id="noCopyConstructor" severity="warning" msg="Class &apos;ObjectBuffer_TS &lt; param_save &gt;&apos; does not have a copy constructor which is recommended since it has dynamic memory/resource allocation(s)." verbose="Class &apos;ObjectBuffer_TS &lt; param_save &gt;&apos; does not have a copy constructor which is recommended since it has dynamic memory/resource allocation(s)." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="291" column="9"/>
+            <symbol>ObjectBuffer_TS &lt; param_save &gt;</symbol>
+        </error>
+        <error id="noOperatorEq" severity="warning" msg="Class &apos;ObjectBuffer_TS &lt; param_save &gt;&apos; does not have a operator= which is recommended since it has dynamic memory/resource allocation(s)." verbose="Class &apos;ObjectBuffer_TS &lt; param_save &gt;&apos; does not have a operator= which is recommended since it has dynamic memory/resource allocation(s)." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="291" column="9"/>
+            <symbol>ObjectBuffer_TS &lt; param_save &gt;</symbol>
+        </error>
+        <error id="noCopyConstructor" severity="warning" msg="Class &apos;ObjectBuffer &lt; float &gt;&apos; does not have a copy constructor which is recommended since it has dynamic memory/resource allocation(s)." verbose="Class &apos;ObjectBuffer &lt; float &gt;&apos; does not have a copy constructor which is recommended since it has dynamic memory/resource allocation(s)." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="119" column="9"/>
+            <symbol>ObjectBuffer &lt; float &gt;</symbol>
+        </error>
+        <error id="noOperatorEq" severity="warning" msg="Class &apos;ObjectBuffer &lt; float &gt;&apos; does not have a operator= which is recommended since it has dynamic memory/resource allocation(s)." verbose="Class &apos;ObjectBuffer &lt; float &gt;&apos; does not have a operator= which is recommended since it has dynamic memory/resource allocation(s)." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="119" column="9"/>
+            <symbol>ObjectBuffer &lt; float &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;ByteBuffer&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;ByteBuffer&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="14" column="5"/>
+            <symbol>ByteBuffer</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;ObjectArray&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;ObjectArray&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="472" column="5"/>
+            <symbol>ObjectArray</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;ExpectDelay&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;ExpectDelay&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/Scheduler.h" line="141" column="5"/>
+            <symbol>ExpectDelay</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;StorageAccess&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;StorageAccess&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/StorageManager/StorageManager.h" line="94" column="5"/>
+            <symbol>StorageAccess</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;AP_Param&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;AP_Param&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Param/AP_Param.h" line="244" column="5"/>
+            <symbol>AP_Param</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;QuaternionT&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;QuaternionT&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_Math/quaternion.h" line="48" column="5"/>
+            <symbol>QuaternionT</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;ObjectBuffer &lt; float &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;ObjectBuffer &lt; float &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="123" column="5"/>
+            <symbol>ObjectBuffer &lt; float &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="43" column="5"/>
+            <symbol>OwnPtr &lt; SPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="50" column="5"/>
+            <symbol>OwnPtr &lt; SPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; SPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="52" column="5"/>
+            <symbol>OwnPtr &lt; SPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="43" column="5"/>
+            <symbol>OwnPtr &lt; WSPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="50" column="5"/>
+            <symbol>OwnPtr &lt; WSPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;OwnPtr &lt; WSPIDevice &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="52" column="5"/>
+            <symbol>OwnPtr &lt; WSPIDevice &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void , uint8_t , bool , uint32_t &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void , uint8_t , bool , uint32_t &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; void , uint8_t , bool , uint32_t &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; void , uint8_t , uint8_t * , uint32_t , bool &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; void &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; bool , uint8_t &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; bool , uint8_t &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; bool , uint8_t &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="38" column="15"/>
+            <symbol>Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;</symbol>
+        </error>
+        <error id="noExplicitConstructor" severity="style" msg="Class &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;&apos; has a constructor with 1 argument that is not explicit." verbose="Class &apos;Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;&apos; has a constructor with 1 argument that is not explicit. Such constructors should in general be explicit for type safety reasons. Using the explicit keyword in the constructor means some mistakes when using the class can be avoided." cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/functor.h" line="45" column="15"/>
+            <symbol>Functor &lt; void , uint8_t , const AP_HAL :: CANFrame &amp; &gt;</symbol>
+        </error>
+        <error id="invalidPointerCast" severity="portability" msg="Casting from float * to unsigned char * is not portable due to different binary data representations on different platforms." verbose="Casting from float * to unsigned char * is not portable due to different binary data representations on different platforms." cwe="704" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="146" column="69"/>
+        </error>
+        <error id="invalidPointerCast" severity="portability" msg="Casting from const float * to unsigned char * is not portable due to different binary data representations on different platforms." verbose="Casting from const float * to unsigned char * is not portable due to different binary data representations on different platforms." cwe="704" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="179" column="30"/>
+        </error>
+        <error id="invalidPointerCast" severity="portability" msg="Casting from const float * to unsigned char * is not portable due to different binary data representations on different platforms." verbose="Casting from const float * to unsigned char * is not portable due to different binary data representations on different platforms." cwe="704" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="188" column="30"/>
+        </error>
+        <error id="invalidPointerCast" severity="portability" msg="Casting from float * to unsigned char * is not portable due to different binary data representations on different platforms." verbose="Casting from float * to unsigned char * is not portable due to different binary data representations on different platforms." cwe="704" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="207" column="29"/>
+        </error>
+        <error id="invalidPointerCast" severity="portability" msg="Casting from float * to unsigned char * is not portable due to different binary data representations on different platforms." verbose="Casting from float * to unsigned char * is not portable due to different binary data representations on different platforms." cwe="704" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="240" column="34"/>
+        </error>
+        <error id="invalidPointerCast" severity="portability" msg="Casting between const unsigned char * and const float * which have an incompatible binary data representation." verbose="Casting between const unsigned char * and const float * which have an incompatible binary data representation." cwe="704" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="252" column="24"/>
+        </error>
+        <error id="invalidPointerCast" severity="portability" msg="Casting from const float * to unsigned char * is not portable due to different binary data representations on different platforms." verbose="Casting from const float * to unsigned char * is not portable due to different binary data representations on different platforms." cwe="704" inconclusive="true" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="271" column="31"/>
+        </error>
+        <error id="constParameter" severity="style" msg="Parameter &apos;_can_ifaces&apos; can be declared with const" verbose="Parameter &apos;_can_ifaces&apos; can be declared with const" cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/HAL.h" line="53" column="27" info="Parameter &apos;_can_ifaces&apos; can be declared with const"/>
+            <symbol>_can_ifaces</symbol>
+        </error>
+        <error id="constParameter" severity="style" msg="Parameter &apos;a&apos; can be declared with const" verbose="Parameter &apos;a&apos; can be declared with const" cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="103" column="27" info="Parameter &apos;a&apos; can be declared with const"/>
+            <symbol>a</symbol>
+        </error>
+        <error id="constParameter" severity="style" msg="Parameter &apos;b&apos; can be declared with const" verbose="Parameter &apos;b&apos; can be declared with const" cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="109" column="47" info="Parameter &apos;b&apos; can be declared with const"/>
+            <symbol>b</symbol>
+        </error>
+        <error id="constParameter" severity="style" msg="Parameter &apos;a&apos; can be declared with const" verbose="Parameter &apos;a&apos; can be declared with const" cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="115" column="27" info="Parameter &apos;a&apos; can be declared with const"/>
+            <symbol>a</symbol>
+        </error>
+        <error id="constParameter" severity="style" msg="Parameter &apos;b&apos; can be declared with const" verbose="Parameter &apos;b&apos; can be declared with const" cwe="398" file0="libraries/AP_MultiHeap/AP_MultiHeap.cpp">
+            <location file="libraries/AP_HAL/utility/OwnPtr.h" line="121" column="47" info="Parameter &apos;b&apos; can be declared with const"/>
+            <symbol>b</symbol>
+        </error>
+        <error id="preprocessorErrorDirective" severity="error" msg="#error Unknown compiler." verbose="#error Unknown compiler.">
+            <location file="modules/ChibiOS/os/common/ext/ARM/CMSIS/Core/Include/cmsis_compiler.h" line="261" column="0"/>
+        </error>
+        <error id="noCopyConstructor" severity="warning" msg="Class &apos;ObjectBuffer_TS&apos; does not have a copy constructor which is recommended since it has dynamic memory/resource allocation(s)." verbose="Class &apos;ObjectBuffer_TS&apos; does not have a copy constructor which is recommended since it has dynamic memory/resource allocation(s)." cwe="398" file0="libraries/AP_MultiHeap/MultiHeap_malloc.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="291" column="9"/>
+            <symbol>ObjectBuffer_TS</symbol>
+        </error>
+        <error id="noOperatorEq" severity="warning" msg="Class &apos;ObjectBuffer_TS&apos; does not have a operator= which is recommended since it has dynamic memory/resource allocation(s)." verbose="Class &apos;ObjectBuffer_TS&apos; does not have a operator= which is recommended since it has dynamic memory/resource allocation(s)." cwe="398" file0="libraries/AP_MultiHeap/MultiHeap_malloc.cpp">
+            <location file="libraries/AP_HAL/utility/RingBuffer.h" line="291" column="9"/>
+            <symbol>ObjectBuffer_TS</symbol>
+        </error>
+    </errors>
+</results>

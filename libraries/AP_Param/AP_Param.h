@@ -241,7 +241,7 @@ public:
     static bool setup();
 
     // constructor with var_info
-    AP_Param(const struct Info *info)
+    explicit AP_Param(const struct Info *info)
     {
         _var_info = info;
         uint16_t i;
@@ -1023,11 +1023,11 @@ public:
     ///
     /// @note It would be nice to range-check i here, but then what would we return?
     ///
-    const T & operator[](uint8_t i) {
+    const T & operator[](uint8_t i) const {
         return _value[i];
     }
 
-    const T & operator[](int8_t i) {
+    const T & operator[](int8_t i) const {
         return _value[(uint8_t)i];
     }
 

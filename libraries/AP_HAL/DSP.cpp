@@ -67,7 +67,8 @@ DSP::FFTWindowState::FFTWindowState(uint16_t window_size, uint16_t sample_rate, 
     // create the Hanning window
     // https://holometer.fnal.gov/GH_FFT.pdf - equation 19
     for (uint16_t i = 0; i < window_size; i++) {
-        _hanning_window[i] = (0.5f - 0.5f * cosf(2.0f * M_PI * i / ((float)window_size - 1)));
+        _hanning_window[i] = 0.5f - 0.5f * cosf((2.0f * static_cast<float>(M_PI) * static_cast<float>(i)) /
+                                                 (static_cast<float>(window_size) - 1.0f));
         _window_scale += _hanning_window[i];
     }
     // Calculate the inverse of the Effective Noise Bandwidth - equation 24
@@ -155,7 +156,7 @@ float DSP::find_noise_width(float* freq_bins, uint16_t start_bin, uint16_t end_b
         for (uint16_t b = max_energy_bin + 1; b <= end_bin; b++) {
             if (freq_bins[b] < freq_bins[max_energy_bin] * cutoff) {
                 // we assume that the 3dB point is in the middle of the final shoulder bin
-                noise_width_hz += (b - max_energy_bin - 0.5f);
+                noise_width_hz += (static_cast<float>(b - max_energy_bin) - 0.5f);
                 peak_top = b;
                 break;
             }
@@ -166,7 +167,7 @@ float DSP::find_noise_width(float* freq_bins, uint16_t start_bin, uint16_t end_b
         for (uint16_t b = max_energy_bin - 1; b >= start_bin; b--) {
             if (freq_bins[b] < freq_bins[max_energy_bin] * cutoff) {
                 // we assume that the 3dB point is in the middle of the final shoulder bin
-                noise_width_hz += (max_energy_bin - b - 0.5f);
+                noise_width_hz += (static_cast<float>(max_energy_bin - b) - 0.5f);
                 peak_bottom = b;
                 break;
             }
@@ -204,7 +205,7 @@ void DSP::update_average_from_sliding_window(FFTWindowState* fft)
     ASSERT_MAX(old_slice_index);
     float* old_slice = &fft->_sliding_window[old_slice_index];
 
-    const float inv_ssize = 1.0f / fft->_sliding_window_size;
+    const float inv_ssize = 1.0f / static_cast<float>(fft->_sliding_window_size);
 
     for (uint16_t i = 0; i < fft->_bin_count; i++) {
         slice[i] = fft->_freq_bins[i] * fft->_window_scale * inv_ssize;
@@ -219,18 +220,22 @@ void DSP::update_average_from_sliding_window(FFTWindowState* fft)
 uint16_t DSP::calc_frequency(FFTWindowState* fft, uint16_t start_bin, uint16_t peak_bin, uint16_t end_bin)
 {
     if (peak_bin == 0 || is_zero(fft->get_freq_bin(peak_bin))) {
-        return start_bin * fft->_bin_resolution;
+        return static_cast<uint16_t>(static_cast<float>(start_bin) * fft->_bin_resolution);
     }
 
-    peak_bin = constrain_int16(peak_bin, start_bin, end_bin);
+    peak_bin = constrain_uint16(peak_bin, start_bin, end_bin);
 
     // It turns out that Jain is pretty good and works with only magnitudes, but Candan is significantly better
     // if you have access to the complex values and Quinn is a little better still. Quinn is computationally
     // more expensive, but compared to the overall FFT cost seems worth it.
     if (fft->_sliding_window != nullptr) {
-        return (peak_bin + calculate_jains_estimator(fft, fft->_avg_freq_bins, peak_bin)) * fft->_bin_resolution;
+        return static_cast<uint16_t>(
+            (static_cast<float>(peak_bin) + calculate_jains_estimator(fft, fft->_avg_freq_bins, peak_bin)) * fft->_bin_resolution
+        );
     } else {
-        return (peak_bin + calculate_quinns_second_estimator(fft, fft->_rfft_data, peak_bin)) * fft->_bin_resolution;
+        return static_cast<uint16_t>(
+            (static_cast<float>(peak_bin) + calculate_quinns_second_estimator(fft, fft->_rfft_data, peak_bin)) * fft->_bin_resolution
+        );
     }
 }
 
@@ -347,7 +352,7 @@ uint16_t DSP::fft_stop_average(FFTWindowState* fft, uint16_t start_bin, uint16_t
     fft->_averaging = false;
 
     // scale by the number of samples
-    vector_scale_float(fft->_avg_freq_bins, fft->_averaging_samples, fft->_avg_freq_bins, fft->_bin_count);
+    vector_scale_float(fft->_avg_freq_bins, static_cast<float>(fft->_averaging_samples), fft->_avg_freq_bins, fft->_bin_count);
 
     const uint16_t smoothwidth = 1;
     uint16_t bin_range = (MIN(end_bin + ((smoothwidth + 1) >> 1) + 2, fft->_bin_count) - start_bin) + 1;
@@ -369,7 +374,7 @@ uint16_t DSP::fft_stop_average(FFTWindowState* fft, uint16_t start_bin, uint16_t
     for (uint16_t i = 0; i < numpeaks; i++) {
         const uint16_t bin = peaks[i] + start_bin;
         float d = calculate_jains_estimator(fft, fft->_avg_freq_bins, bin);
-        freqs[i] = (bin + d) * fft->_bin_resolution;
+        freqs[i] = (static_cast<float>(bin) + d) * fft->_bin_resolution;
     }
 
     fft->_averaging_samples = 0;
@@ -400,14 +405,15 @@ uint16_t DSP::find_peaks(const float* input, uint16_t length, float* d, uint16_t
     memset(xx, 0, peakgroup * sizeof(uint16_t));
     memset(yy, 0, peakgroup * sizeof(float));
 
-    for (uint16_t j = (halfw << 1) - 2; j < length - smoothwidth - 1; j++) {
+    const int32_t j_limit = static_cast<int32_t>(length) - static_cast<int32_t>(smoothwidth) - 1;
+    for (int32_t j = static_cast<int32_t>((halfw << 1) - 2U); j < j_limit; j++) {
         if (d[j] >= 0 && d[j + 1] <= 0 && !is_equal(d[j], d[j + 1])) { // detect zero crossing
             if ((d[j] - d[j + 1]) > slopeThreshold) {
                 for (uint16_t k = 0; k < peakgroup; k++) {
-                    uint16_t groupIndex = j + k - n + 2;
-                    groupIndex = constrain_int16(groupIndex, 0, length - 1);
-                    xx[k] = groupIndex;
-                    yy[k] = input[groupIndex];
+                    int32_t groupIndex = j + static_cast<int32_t>(k) - static_cast<int32_t>(n) + 2;
+                    groupIndex = constrain_int32(groupIndex, 0, static_cast<int32_t>(length) - 1);
+                    xx[k] = static_cast<uint16_t>(groupIndex);
+                    yy[k] = input[xx[k]];
                 }
                 if (peakgroup < 3) {
                     vector_max_float(yy, peakgroup, &peakY, &pindex);
@@ -420,13 +426,13 @@ uint16_t DSP::find_peaks(const float* input, uint16_t length, float* d, uint16_t
                 // see if we have a valid peak
                 if (isfinite(peakY) && peakY >= ampThreshold) {
                     // record in amplitude order
-                    for (int16_t i = 0; i < peaklen; i++) {
+                    for (uint16_t i = 0; i < peaklen; i++) {
                         if (i >= numpeaks) {
                             peaks[i] = peakX;
                             break;
                         }
                         if (peakY > input[peaks[i]]) {
-                            for (int16_t a = peaklen - 1; a > i; a--) {
+                            for (uint16_t a = static_cast<uint16_t>(peaklen - 1U); a > i; a--) {
                                 peaks[a] = peaks[a - 1];
                             }
                             peaks[i] = peakX;
@@ -481,14 +487,14 @@ void DSP::fastsmooth(float* input, uint16_t n, uint16_t smoothwidth) const
         window[i % smoothwidth] = sumpoints;
         sumpoints -= input[i];
         sumpoints += input[i + smoothwidth];
-        input[i] = window[(i + smoothwidth - 1) % smoothwidth] / smoothwidth;
+        input[i] = window[(i + smoothwidth - 1) % smoothwidth] / static_cast<float>(smoothwidth);
     }
     uint16_t last = n - smoothwidth + halfw;
     input[last] = 0.0f;
     for (int i = last + 1; i < n; i++) {
         input[last] += input[i];
     }
-    input[n - smoothwidth + halfw] /= smoothwidth;
+    input[n - smoothwidth + halfw] /= static_cast<float>(smoothwidth);
     for (int i = last + 1; i < n; i++) {
         input[i] = 0.0f;
     }

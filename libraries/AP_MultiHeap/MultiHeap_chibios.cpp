@@ -9,13 +9,18 @@
 
 #include <ch.h>
 #include <hal.h>
+#include <limits.h>
 
 /*
   heap functions used by lua scripting
  */
 void *MultiHeap::heap_create(uint32_t size)
 {
-    memory_heap_t *heap = (memory_heap_t *)malloc(size + sizeof(memory_heap_t));
+    if (size > (UINT32_MAX - sizeof(memory_heap_t))) {
+        return nullptr;
+    }
+
+    auto *heap = static_cast<memory_heap_t *>(malloc(size + sizeof(memory_heap_t)));
     if (heap == nullptr) {
         return nullptr;
     }
@@ -36,12 +41,15 @@ void *MultiHeap::heap_allocate(void *heap, uint32_t size)
     if (size == 0) {
         return nullptr;
     }
-    return chHeapAlloc((memory_heap_t *)heap, size);
+    return chHeapAlloc(static_cast<memory_heap_t *>(heap), size);
 }
 
 void MultiHeap::heap_free(void *ptr)
 {
-    return chHeapFree(ptr);
+    if (ptr == nullptr) {
+        return;
+    }
+    chHeapFree(ptr);
 }
 
 #endif // ENABLE_HEAP && CONFIG_HAL_BOARD

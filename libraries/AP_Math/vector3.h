@@ -134,19 +134,35 @@ public:
 
     // allow a vector3 to be used as an array, 0 indexed
     T & operator[](uint8_t i) {
-        T *_v = &x;
+        switch (i) {
+        case 0:
+            return x;
+        case 1:
+            return y;
+        case 2:
+            return z;
+        default:
 #if MATH_CHECK_INDEXES
-        assert(i >= 0 && i < 3);
+            assert(i < 3);
 #endif
-        return _v[i];
+            return x;
+        }
     }
 
     const T & operator[](uint8_t i) const {
-        const T *_v = &x;
+        switch (i) {
+        case 0:
+            return x;
+        case 1:
+            return y;
+        case 2:
+            return z;
+        default:
 #if MATH_CHECK_INDEXES
-        assert(i >= 0 && i < 3);
+            assert(i < 3);
 #endif
-        return _v[i];
+            return x;
+        }
     }
 
     // dot product

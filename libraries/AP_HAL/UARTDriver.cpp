@@ -217,8 +217,8 @@ void AP_HAL::UARTDriver::log_stats(const uint8_t inst, StatsTracker &stats, cons
         LOG_PACKET_HEADER_INIT(LOG_UART_MSG),
         time_us  : AP_HAL::micros64(),
         instance : inst,
-        tx_rate  : float((tx_bytes * 1000) / dt_ms),
-        rx_rate  : float((rx_bytes * 1000) / dt_ms),
+        tx_rate  : ((static_cast<float>(tx_bytes) * 1000.0f) / static_cast<float>(dt_ms)),
+        rx_rate  : ((static_cast<float>(rx_bytes) * 1000.0f) / static_cast<float>(dt_ms)),
     };
     AP::logger().WriteBlock(&pkt, sizeof(pkt));
 }

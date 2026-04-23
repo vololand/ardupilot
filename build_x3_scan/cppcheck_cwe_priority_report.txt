@@ -1,0 +1,34 @@
+# CWE Priority Report (cppcheck)
+
+- Total findings: 15
+- High: 0
+- Medium: 0
+- Low: 15
+
+## High
+- None
+
+## Medium
+- None
+
+## Low
+- Top CWE counts:
+  - CWE-398: 14
+  - CWE-N/A: 1
+- Findings:
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_Math/quaternion.h:44 :: Class 'QuaternionT' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/RingBuffer.h:125 :: Class 'ObjectBuffer < float >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h:43 :: Class 'OwnPtr < SPIDevice >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h:50 :: Class 'OwnPtr < SPIDevice >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h:52 :: Class 'OwnPtr < SPIDevice >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h:43 :: Class 'OwnPtr < WSPIDevice >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h:50 :: Class 'OwnPtr < WSPIDevice >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/OwnPtr.h:52 :: Class 'OwnPtr < WSPIDevice >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h:45 :: Class 'Functor < void , uint8_t , bool , uint32_t >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h:45 :: Class 'Functor < void , uint8_t , uint8_t * , uint32_t , bool >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h:45 :: Class 'Functor < void >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h:45 :: Class 'Functor < bool , uint8_t >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h:38 :: Class 'Functor < void , uint8_t , const AP_HAL :: CANFrame & >' has a constructor with 1 argument that is not explicit.
+  - [CWE-398] (style) noExplicitConstructor :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/libraries/AP_HAL/utility/functor.h:45 :: Class 'Functor < void , uint8_t , const AP_HAL :: CANFrame & >' has a constructor with 1 argument that is not explicit.
+  - [CWE-N/A] (error) preprocessorErrorDirective :: /home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/modules/ChibiOS/os/common/ext/ARM/CMSIS/Core/Include/cmsis_compiler.h:261 :: #error Unknown compiler.
+

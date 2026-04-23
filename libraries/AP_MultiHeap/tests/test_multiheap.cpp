@@ -9,7 +9,12 @@ TEST(MultiHeap, Tests)
 {
     static MultiHeap h;
 
-    EXPECT_TRUE(h.create(150000, 10, true, 10000));
+    MultiHeap::CreateConfig cfg{};
+    cfg.total_size = 150000;
+    cfg.max_heaps = 10;
+    cfg.allow_expansion = true;
+    cfg.reserve_size = 10000;
+    EXPECT_TRUE(h.create(cfg));
     EXPECT_TRUE(h.available());
 
     const uint32_t max_allocs = 1000;

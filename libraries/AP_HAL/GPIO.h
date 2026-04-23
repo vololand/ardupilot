@@ -18,6 +18,13 @@ public:
 
 class AP_HAL::PWMSource {
 public:
+    PWMSource() :
+        _irq_value_us(0),
+        _pulse_start_us(0),
+        _irq_value_us_sum(0),
+        _irq_value_us_count(0),
+        interrupt_attached(false)
+    {}
 
     // Destructor detaches interrupt
     ~PWMSource();

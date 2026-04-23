@@ -8,6 +8,7 @@
 
 #if ENABLE_HEAP
 #include <AP_Math/AP_Math.h>
+#include <limits.h>
 #include <stdio.h>
 
 /*
@@ -23,8 +24,10 @@ extern const AP_HAL::HAL &hal;
   create heaps with a total memory size, splitting over at most
   max_heaps
  */
-bool MultiHeap::create(uint32_t total_size, uint8_t max_heaps, bool _allow_expansion, uint32_t _reserve_size)
+bool MultiHeap::create(const CreateConfig &config)
 {
+    uint32_t total_size = config.total_size;
+    uint8_t max_heaps = config.max_heaps;
     max_heaps = MIN(MAX_HEAPS, max_heaps);
     if (heaps != nullptr) {
         // don't allow double allocation
@@ -44,7 +47,7 @@ bool MultiHeap::create(uint32_t total_size, uint8_t max_heaps, bool _allow_expan
                 sum_size += alloc_size;
                 break;
             }
-            alloc_size *= 0.9;
+            alloc_size = (alloc_size * 9U) / 10U;
         }
         if (total_size == 0) {
             break;
@@ -55,8 +58,8 @@ bool MultiHeap::create(uint32_t total_size, uint8_t max_heaps, bool _allow_expan
         return false;
     }
 
-    allow_expansion = _allow_expansion;
-    reserve_size = _reserve_size;
+    allow_expansion = config.allow_expansion;
+    reserve_size = config.reserve_size;
 
     return true;
 }
@@ -128,15 +131,23 @@ void *MultiHeap::allocate(uint32_t size)
      */
     const uint32_t available = hal.util->available_memory();
     const uint32_t heap_overhead = 128; // conservative value, varies with HAL
+    if (size > (UINT32_MAX - heap_overhead)) {
+        last_failed = true;
+        return nullptr;
+    }
     const uint32_t min_size = size + heap_overhead;
-    if (available < reserve_size+min_size) {
+    if (reserve_size > (UINT32_MAX - min_size)) {
+        last_failed = true;
+        return nullptr;
+    }
+    if (available < reserve_size + min_size) {
         last_failed = true;
         return nullptr;
     }
 
     // round up to a minimum of 30k to allocate, and allow for heap overhead
     const uint32_t round_to = 30*1024U;
-    const uint32_t alloc_size = MIN(available - reserve_size, MAX(size+heap_overhead, round_to));
+    const uint32_t alloc_size = MIN(available - reserve_size, MAX(min_size, round_to));
     if (alloc_size < min_size) {
         last_failed = true;
         return nullptr;

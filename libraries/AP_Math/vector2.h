@@ -121,19 +121,31 @@ struct Vector2
 
     // allow a vector2 to be used as an array, 0 indexed
     T & operator[](uint8_t i) {
-        T *_v = &x;
+        switch (i) {
+        case 0:
+            return x;
+        case 1:
+            return y;
+        default:
 #if MATH_CHECK_INDEXES
-        assert(i >= 0 && i < 2);
+            assert(i < 2);
 #endif
-        return _v[i];
+            return x;
+        }
     }
 
     const T & operator[](uint8_t i) const {
-        const T *_v = &x;
+        switch (i) {
+        case 0:
+            return x;
+        case 1:
+            return y;
+        default:
 #if MATH_CHECK_INDEXES
-        assert(i >= 0 && i < 2);
+            assert(i < 2);
 #endif
-        return _v[i];
+            return x;
+        }
     }
     
     // zero the vector

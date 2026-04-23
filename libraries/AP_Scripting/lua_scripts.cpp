@@ -45,7 +45,12 @@ lua_scripts::lua_scripts(const AP_Int32 &vm_steps, const AP_Int32 &heap_size, AP
       _debug_options(debug_options)
 {
     const bool allow_heap_expansion = !option_is_set(AP_Scripting::DebugOption::DISABLE_HEAP_EXPANSION);
-    _heap.create(heap_size, 10, allow_heap_expansion, 20*1024);
+    MultiHeap::CreateConfig heap_config{};
+    heap_config.total_size = static_cast<uint32_t>(heap_size);
+    heap_config.max_heaps = 10;
+    heap_config.allow_expansion = allow_heap_expansion;
+    heap_config.reserve_size = 20U * 1024U;
+    _heap.create(heap_config);
 }
 
 lua_scripts::~lua_scripts() {

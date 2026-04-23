@@ -56,11 +56,11 @@ public:
 
     // Compare if the two Functors are calling the same method in the same
     // object
-    inline bool operator==(const Functor<RetType, Args...>& rhs)
+    inline bool operator==(const Functor<RetType, Args...>& rhs) const
     {
         return _obj == rhs._obj && _method == rhs._method;
     }
-    inline bool operator!=(const Functor<RetType, Args...>& rhs)
+    inline bool operator!=(const Functor<RetType, Args...>& rhs) const
     {
         return _obj != rhs._obj || _method != rhs._method;
     }

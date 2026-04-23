@@ -100,25 +100,25 @@ private:
 };
 
 template<typename T>
-inline bool operator==(T* a, const OwnPtr<T>& b)
+inline bool operator==(const T* a, const OwnPtr<T>& b)
 {
     return a == b.get();
 }
 
 template<typename T>
-inline bool operator==(const OwnPtr<T>& a, T* b)
+inline bool operator==(const OwnPtr<T>& a, const T* b)
 {
     return a.get() == b;
 }
 
 template<typename T>
-inline bool operator!=(T* a, const OwnPtr<T>& b)
+inline bool operator!=(const T* a, const OwnPtr<T>& b)
 {
     return a != b.get();
 }
 
 template<typename T>
-inline bool operator!=(const OwnPtr<T>& a, T* b)
+inline bool operator!=(const OwnPtr<T>& a, const T* b)
 {
     return a.get() != b;
 }

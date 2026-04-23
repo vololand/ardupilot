@@ -10,7 +10,11 @@
 
 class AP_HAL::Scheduler {
 public:
-    Scheduler() {}
+    Scheduler() :
+        _min_delay_cb_ms(0),
+        _delay_cb(nullptr),
+        _in_delay_callback(false)
+    {}
     virtual void     init() = 0;
     virtual void     delay(uint16_t ms) = 0;
 
@@ -138,7 +142,7 @@ private:
  */
 class ExpectDelay {
 public:
-    ExpectDelay(uint32_t ms);
+    explicit ExpectDelay(uint32_t ms);
     ~ExpectDelay();
 };
 

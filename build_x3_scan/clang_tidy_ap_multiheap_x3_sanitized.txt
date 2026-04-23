@@ -1,0 +1,19 @@
+10855 warnings generated.
+22510 warnings generated.
+/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/build_x3_scan/NarinFC-X3/../../libraries/AP_MultiHeap/AP_MultiHeap.cpp:27:24: warning: 2 adjacent parameters of 'create' of convertible types are easily swapped by mistake [bugprone-easily-swappable-parameters]
+bool MultiHeap::create(uint32_t total_size, uint8_t max_heaps, bool _allow_expansion, uint32_t _reserve_size)
+                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/build_x3_scan/NarinFC-X3/../../libraries/AP_MultiHeap/AP_MultiHeap.cpp:27:33: note: the first parameter in the range is 'total_size'
+bool MultiHeap::create(uint32_t total_size, uint8_t max_heaps, bool _allow_expansion, uint32_t _reserve_size)
+                                ^~~~~~~~~~
+/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/build_x3_scan/NarinFC-X3/../../libraries/AP_MultiHeap/AP_MultiHeap.cpp:27:53: note: the last parameter in the range is 'max_heaps'
+bool MultiHeap::create(uint32_t total_size, uint8_t max_heaps, bool _allow_expansion, uint32_t _reserve_size)
+                                                    ^~~~~~~~~
+/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/build_x3_scan/NarinFC-X3/../../libraries/AP_MultiHeap/AP_MultiHeap.cpp:27:24: note: 
+bool MultiHeap::create(uint32_t total_size, uint8_t max_heaps, bool _allow_expansion, uint32_t _reserve_size)
+                       ^
+/home/jobs/ProjectSvn/DroneForArmyEducation/trunk/NarinFC_ArduPilot-4.6_SecureCoding/build_x3_scan/NarinFC-X3/../../libraries/AP_MultiHeap/AP_MultiHeap.cpp:27:45: note: 'uint32_t' and 'uint8_t' may be implicitly converted: 'uint32_t' (as 'unsigned int') -> 'uint8_t' (as 'unsigned char'), 'uint8_t' (as 'unsigned char') -> 'uint32_t' (as 'unsigned int')
+bool MultiHeap::create(uint32_t total_size, uint8_t max_heaps, bool _allow_expansion, uint32_t _reserve_size)
+                                            ^
+Suppressed 22509 warnings (22500 in non-user code, 9 with check filters).
+Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.

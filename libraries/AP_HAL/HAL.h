@@ -50,9 +50,9 @@ public:
         AP_HAL::DSP*        _dsp,
 #endif
 #if HAL_NUM_CAN_IFACES > 0
-        AP_HAL::CANIface* _can_ifaces[HAL_NUM_CAN_IFACES])
+        AP_HAL::CANIface* const _can_ifaces[HAL_NUM_CAN_IFACES])
 #else
-        AP_HAL::CANIface** _can_ifaces)
+        AP_HAL::CANIface* const * _can_ifaces)
 #endif
         :
         i2c_mgr(_i2c_mgr),

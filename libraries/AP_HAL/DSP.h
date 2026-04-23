@@ -84,7 +84,7 @@ public:
         // current sliding window slice
         uint8_t _current_slice;
         // get a frequency bin from an arbitrary slice
-        float get_freq_bin(uint16_t idx) { return _sliding_window == nullptr ? _freq_bins[idx] : _avg_freq_bins[idx]; }
+        float get_freq_bin(uint16_t idx) const { return _sliding_window == nullptr ? _freq_bins[idx] : _avg_freq_bins[idx]; }
 
         void free_data_structures();
         virtual ~FFTWindowState();

@@ -91,7 +91,7 @@ private:
 class StorageAccess {
 public:
     // constructor
-    StorageAccess(StorageManager::StorageType _type);
+    explicit StorageAccess(StorageManager::StorageType _type);
 
     // return total size of this accessor
     uint16_t size(void) const { return total_size; }

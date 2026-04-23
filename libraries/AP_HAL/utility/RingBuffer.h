@@ -1,7 +1,9 @@
 #pragma once
 
 #include <atomic>
+#include <cstring>
 #include <stdint.h>
+#include <vector>
 #include <AP_HAL/AP_HAL_Boards.h>
 #include <AP_HAL/AP_HAL_Macros.h>
 #include <AP_HAL/Semaphores.h>
@@ -11,7 +13,7 @@
  */
 class ByteBuffer {
 public:
-    ByteBuffer(uint32_t size);
+    explicit ByteBuffer(uint32_t size);
     ByteBuffer(uint8_t* _buf, uint32_t _size) :
     buf(_buf),
     size(_size),
@@ -111,7 +113,7 @@ private:
 template <class T>
 class ObjectBuffer {
 public:
-    ObjectBuffer(uint32_t _size = 0) {
+    explicit ObjectBuffer(uint32_t _size = 0) {
         // we set size to 1 more than requested as the byte buffer
         // gives one less byte than requested. We round up to a full
         // multiple of the object size so that we always get aligned
@@ -124,6 +126,9 @@ public:
     buffer(_buffer),
     external_buf(true)
     {}
+
+    ObjectBuffer(const ObjectBuffer &) = delete;
+    ObjectBuffer &operator=(const ObjectBuffer &) = delete;
 
     ~ObjectBuffer(void) {
         if (!external_buf)
@@ -143,7 +148,7 @@ public:
     bool set_size(uint32_t size) { return buffer->set_size(((size+1) * sizeof(T))); }
 
     // read len objects without advancing the read pointer
-    uint32_t peek(T *data, uint32_t len) { return buffer->peekbytes((uint8_t*)data, len * sizeof(T)) / sizeof(T); }
+    uint32_t peek(T *data, uint32_t len) { return buffer->peekbytes(to_u8_ptr(data), len * sizeof(T)) / sizeof(T); }
 
     // Discards the buffer content, emptying it.
     // !!! Note ObjectBuffer_TS is a duplicate of this update, in both places !!!
@@ -176,7 +181,7 @@ public:
         if (buffer->space() < sizeof(T)) {
             return false;
         }
-        return buffer->write((uint8_t*)&object, sizeof(T)) == sizeof(T);
+        return buffer->write(to_u8_ptr(&object), sizeof(T)) == sizeof(T);
     }
 
     // push N objects onto the back of the queue
@@ -185,7 +190,7 @@ public:
         if (buffer->space() < n*sizeof(T)) {
             return false;
         }
-        return buffer->write((uint8_t*)object, n*sizeof(T)) == n*sizeof(T);
+        return buffer->write(to_u8_ptr(object), n*sizeof(T)) == n*sizeof(T);
     }
     
     /*
@@ -204,7 +209,7 @@ public:
         if (buffer->available() < sizeof(T)) {
             return false;
         }
-        return buffer->read((uint8_t*)&object, sizeof(T)) == sizeof(T);
+        return buffer->read(to_u8_ptr(&object), sizeof(T)) == sizeof(T);
     }
 
 
@@ -237,7 +242,7 @@ public:
      */
     // !!! Note ObjectBuffer_TS is a duplicate of this update, in both places !!!
     bool peek(T &object) WARN_IF_UNUSED {
-        return buffer->peekbytes((uint8_t*)&object, sizeof(T)) == sizeof(T);
+        return buffer->peekbytes(to_u8_ptr(&object), sizeof(T)) == sizeof(T);
     }
 
     /*
@@ -247,15 +252,18 @@ public:
     // !!! Note ObjectBuffer_TS is a duplicate of this, update in both places !!!
     const T *readptr(uint32_t &n) {
         uint32_t avail_bytes = 0;
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wcast-align"
-        const T *ret = (const T *)buffer->readptr(avail_bytes);
-        #pragma GCC diagnostic pop
+        const uint8_t *ret = buffer->readptr(avail_bytes);
         if (!ret || avail_bytes < sizeof(T)) {
             return nullptr;
         }
         n = avail_bytes / sizeof(T);
-        return ret;
+        /*
+          Copy from byte-oriented ring storage to typed cache to avoid
+          type-punned pointer aliasing and portability issues.
+         */
+        _readptr_cache.resize(n);
+        memcpy(_readptr_cache.data(), ret, n * sizeof(T));
+        return _readptr_cache.data();
     }
 
     // advance the read pointer (discarding objects)
@@ -268,12 +276,21 @@ public:
        be fetched by pop()) */
     // !!! Note ObjectBuffer_TS is a duplicate of this, update in both places !!!
     bool update(const T &object) {
-        return buffer->update((uint8_t*)&object, sizeof(T));
+        return buffer->update(to_u8_ptr(&object), sizeof(T));
     }
 
 private:
+    static uint8_t *to_u8_ptr(T *ptr) {
+        return static_cast<uint8_t *>(static_cast<void *>(ptr));
+    }
+
+    static const uint8_t *to_u8_ptr(const T *ptr) {
+        return static_cast<const uint8_t *>(static_cast<const void *>(ptr));
+    }
+
     ByteBuffer *buffer = nullptr;
     bool external_buf = true;
+    std::vector<T> _readptr_cache;
 };
 
 /*
@@ -290,6 +307,8 @@ public:
         // elements, which makes the readptr() method possible
         buffer = NEW_NOTHROW ByteBuffer(((_size+1) * sizeof(T)));
     }
+    ObjectBuffer_TS(const ObjectBuffer_TS &) = delete;
+    ObjectBuffer_TS &operator=(const ObjectBuffer_TS &) = delete;
     ~ObjectBuffer_TS(void) {
         delete buffer;
     }
@@ -313,7 +332,7 @@ public:
     // read len objects without advancing the read pointer
     uint32_t peek(T *data, uint32_t len) {
         WITH_SEMAPHORE(sem);
-        return buffer->peekbytes((uint8_t*)data, len * sizeof(T)) / sizeof(T);
+        return buffer->peekbytes(to_u8_ptr(data), len * sizeof(T)) / sizeof(T);
     }
 
 
@@ -353,7 +372,7 @@ public:
         if (buffer->space() < sizeof(T)) {
             return false;
         }
-        return buffer->write((uint8_t*)&object, sizeof(T)) == sizeof(T);
+        return buffer->write(to_u8_ptr(&object), sizeof(T)) == sizeof(T);
     }
 
     // push N objects onto the back of the queue
@@ -363,7 +382,7 @@ public:
         if (buffer->space() < n*sizeof(T)) {
             return false;
         }
-        return buffer->write((uint8_t*)object, n*sizeof(T)) == n*sizeof(T);
+        return buffer->write(to_u8_ptr(object), n*sizeof(T)) == n*sizeof(T);
     }
 
     /*
@@ -384,7 +403,7 @@ public:
         if (buffer->available() < sizeof(T)) {
             return false;
         }
-        return buffer->read((uint8_t*)&object, sizeof(T)) == sizeof(T);
+        return buffer->read(to_u8_ptr(&object), sizeof(T)) == sizeof(T);
     }
 
     /*
@@ -419,7 +438,7 @@ public:
     // !!! Note this is a duplicate of ObjectBuffer with semaphore, update in both places !!!
     bool peek(T &object) WARN_IF_UNUSED {
         WITH_SEMAPHORE(sem);
-        return buffer->peekbytes((uint8_t*)&object, sizeof(T)) == sizeof(T);
+        return buffer->peekbytes(to_u8_ptr(&object), sizeof(T)) == sizeof(T);
     }
 
     /*
@@ -453,10 +472,18 @@ public:
     // !!! Note this is a duplicate of ObjectBuffer with semaphore, update in both places !!!
     bool update(const T &object) {
         WITH_SEMAPHORE(sem);
-        return buffer->update((uint8_t*)&object, sizeof(T));
+        return buffer->update(to_u8_ptr(&object), sizeof(T));
     }
 
 private:
+    static uint8_t *to_u8_ptr(T *ptr) {
+        return static_cast<uint8_t *>(static_cast<void *>(ptr));
+    }
+
+    static const uint8_t *to_u8_ptr(const T *ptr) {
+        return static_cast<const uint8_t *>(static_cast<const void *>(ptr));
+    }
+
     ByteBuffer *buffer = nullptr;
     HAL_Semaphore sem;
 };
@@ -469,11 +496,13 @@ private:
 template <class T>
 class ObjectArray {
 public:
-    ObjectArray(uint16_t size_) {
+    explicit ObjectArray(uint16_t size_) {
         _size = size_;
         _head = _count = 0;
         _buffer = NEW_NOTHROW T[_size];
     }
+    ObjectArray(const ObjectArray &) = delete;
+    ObjectArray &operator=(const ObjectArray &) = delete;
     ~ObjectArray(void) {
         delete[] _buffer;
     }

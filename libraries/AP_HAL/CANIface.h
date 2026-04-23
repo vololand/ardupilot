@@ -120,7 +120,7 @@ public:
         FilteredMode
     };
 
-    OperatingMode get_operating_mode() { return mode_; }
+    OperatingMode get_operating_mode() const { return mode_; }
 
     typedef uint16_t CanIOFlags;
     static const CanIOFlags Loopback = 1;

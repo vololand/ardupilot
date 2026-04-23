@@ -136,7 +136,7 @@ class WSPIDevice : public Device
 {
 public:
 
-    WSPIDevice() : Device(BUS_TYPE_WSPI) { }
+    WSPIDevice() : Device(BUS_TYPE_WSPI), _trx_flags(0) { }
 
     /* See AP_HAL::Device::transfer() */
     virtual bool transfer(const uint8_t *send, uint32_t send_len,

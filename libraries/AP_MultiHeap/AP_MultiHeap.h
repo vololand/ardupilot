@@ -16,10 +16,27 @@
 
 class MultiHeap {
 public:
+    MultiHeap() :
+        heaps(nullptr),
+        num_heaps(0),
+        allow_expansion(false),
+        reserve_size(0),
+        sum_size(0),
+        expanded_to(0),
+        last_failed(false)
+    {}
+
+    struct CreateConfig {
+        uint32_t total_size;
+        uint8_t max_heaps;
+        bool allow_expansion;
+        uint32_t reserve_size;
+    };
+
     /*
       allocate/deallocate heaps
      */
-    bool create(uint32_t total_size, uint8_t max_heaps, bool allow_expansion, uint32_t reserve_size);
+    bool create(const CreateConfig &config);
     void destroy(void);
 
     // return true if the heap is available for operations
