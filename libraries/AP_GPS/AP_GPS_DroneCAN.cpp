@@ -686,6 +686,11 @@ void AP_GPS_DroneCAN::handle_relposheading_msg_trampoline(AP_DroneCAN *ap_dronec
 
 bool AP_GPS_DroneCAN::do_config()
 {
+    if (AP_GPS_DroneCAN::gcs_sync_work_pending()) {
+        // defer boot-time node config while GCS param sync is in progress
+        return false;
+    }
+
     AP_DroneCAN *ap_dronecan = _detected_modules[_detected_module].ap_dronecan;
     if (ap_dronecan == nullptr) {
         return false;
@@ -694,10 +699,8 @@ bool AP_GPS_DroneCAN::do_config()
     
     switch(cfg_step) {
         case STEP_SET_TYPE:
-            // GPS_TYPE was renamed GPS1_TYPE.  Request both and
-            // handle whichever we receive.
-            ap_dronecan->get_parameter_on_node(node_id, "GPS_TYPE", &param_int_cb);
-            ap_dronecan->get_parameter_on_node(node_id, "GPS1_TYPE", &param_int_cb);
+            // TYPE sync to DroneCAN GPS nodes is handled when GCS writes params
+            cfg_step++;
             break;
         case STEP_SET_MB_CAN_TX:
             if (role != AP_GPS::GPS_Role::GPS_ROLE_NORMAL) {
@@ -925,5 +928,404 @@ bool AP_GPS_DroneCAN::instance_exists(const AP_DroneCAN* ap_dronecan)
     return false;
 }
 #endif // AP_DRONECAN_SEND_GPS
+
+#define GPS_GCS_NODE_SYNC_QUEUE_SIZE 8
+#define GPS_GCS_NODE_SYNC_TIMEOUT_MS 10000
+#define GPS_GCS_NODE_SYNC_QUEUE_TIMEOUT_MS 30000
+
+struct GCSNodeSyncRequest {
+    uint8_t gps_instance;
+    AP_GPS_DroneCAN::GCSNodeSyncKind kind;
+    uint32_t queued_ms;
+};
+
+enum class GCSNodeSyncStep : uint8_t {
+    GET_PARAM = 0,
+    SAVE,
+};
+
+struct GCSNodeSyncState {
+    bool active;
+    uint8_t gps_instance;
+    AP_GPS_DroneCAN::GCSNodeSyncKind kind;
+    GCSNodeSyncStep step;
+    AP_DroneCAN *ap_dronecan;
+    uint8_t node_id;
+    bool value_changed;
+    bool save_sent;
+    uint32_t step_start_ms;
+};
+
+static GCSNodeSyncRequest gcs_sync_queue[GPS_GCS_NODE_SYNC_QUEUE_SIZE];
+static uint8_t gcs_sync_queue_length;
+static HAL_Semaphore gcs_sync_queue_sem;
+static GCSNodeSyncState gcs_sync_state;
+
+static void gcs_sync_pop_front()
+{
+    WITH_SEMAPHORE(gcs_sync_queue_sem);
+    if (gcs_sync_queue_length == 0) {
+        return;
+    }
+    gcs_sync_queue_length--;
+    for (uint8_t i = 0; i < gcs_sync_queue_length; i++) {
+        gcs_sync_queue[i] = gcs_sync_queue[i + 1];
+    }
+}
+
+class GCSNodeSyncCallbacks {
+public:
+    GCSNodeSyncCallbacks();
+
+    bool handle_param_int(AP_DroneCAN *ap_dronecan, uint8_t node_id, const char *name, int32_t &value);
+    void handle_param_save(AP_DroneCAN *ap_dronecan, uint8_t node_id, bool success);
+
+    AP_DroneCAN::ParamGetSetIntCb param_int_cb;
+    AP_DroneCAN::ParamSaveCb param_save_cb;
+};
+
+static GCSNodeSyncCallbacks gcs_sync_callbacks;
+
+static bool gcs_sync_is_dronecan_mb_type(AP_GPS::GPS_Type type)
+{
+    return type == AP_GPS::GPS_TYPE_UAVCAN_RTK_BASE ||
+           type == AP_GPS::GPS_TYPE_UAVCAN_RTK_ROVER;
+}
+
+static const char *gcs_sync_node_param_name(AP_GPS_DroneCAN::GCSNodeSyncKind kind)
+{
+    switch (kind) {
+    case AP_GPS_DroneCAN::GCSNodeSyncKind::TYPE:
+        return "GPS1_TYPE";
+    case AP_GPS_DroneCAN::GCSNodeSyncKind::GNSS_MODE:
+        return "GPS1_GNSS_MODE";
+    }
+    return nullptr;
+}
+
+static void gcs_sync_finish(bool success, const char *msg)
+{
+    if (msg != nullptr) {
+        GCS_SEND_TEXT(success ? MAV_SEVERITY_INFO : MAV_SEVERITY_WARNING, "%s", msg);
+    }
+    gcs_sync_state = {};
+}
+
+GCSNodeSyncCallbacks::GCSNodeSyncCallbacks() :
+    param_int_cb(FUNCTOR_BIND_MEMBER(&GCSNodeSyncCallbacks::handle_param_int, bool, AP_DroneCAN*, const uint8_t, const char*, int32_t &)),
+    param_save_cb(FUNCTOR_BIND_MEMBER(&GCSNodeSyncCallbacks::handle_param_save, void, AP_DroneCAN*, const uint8_t, bool))
+{
+}
+
+bool GCSNodeSyncCallbacks::handle_param_int(AP_DroneCAN *ap_dronecan, uint8_t node_id, const char *name, int32_t &value)
+{
+    if (!gcs_sync_state.active || ap_dronecan != gcs_sync_state.ap_dronecan || node_id != gcs_sync_state.node_id) {
+        return false;
+    }
+    if (gcs_sync_state.step != GCSNodeSyncStep::GET_PARAM) {
+        return false;
+    }
+
+    const char *expected_name = gcs_sync_node_param_name(gcs_sync_state.kind);
+    if (expected_name == nullptr || strcmp(name, expected_name) != 0) {
+        return false;
+    }
+
+    AP_GPS *gps = AP_GPS::get_singleton();
+    if (gps == nullptr) {
+        gcs_sync_finish(false, "GPS node sync failed");
+        return false;
+    }
+
+    const int32_t desired = AP_GPS_DroneCAN::gcs_sync_desired_node_value(*gps, gcs_sync_state.gps_instance, gcs_sync_state.kind);
+    if (desired < 0) {
+        gcs_sync_finish(false, "GPS node sync failed");
+        return false;
+    }
+
+    if (value != desired) {
+        value = desired;
+        gcs_sync_state.value_changed = true;
+        return true;
+    }
+
+    if (gcs_sync_state.value_changed) {
+        gcs_sync_state.step = GCSNodeSyncStep::SAVE;
+        gcs_sync_state.save_sent = false;
+        gcs_sync_state.step_start_ms = AP_HAL::millis();
+    } else {
+        gcs_sync_finish(true, "GPS node param already in sync");
+    }
+    return false;
+}
+
+void GCSNodeSyncCallbacks::handle_param_save(AP_DroneCAN *ap_dronecan, uint8_t node_id, bool success)
+{
+    if (!gcs_sync_state.active || ap_dronecan != gcs_sync_state.ap_dronecan || node_id != gcs_sync_state.node_id) {
+        return;
+    }
+    if (gcs_sync_state.step != GCSNodeSyncStep::SAVE) {
+        return;
+    }
+
+    if (!success) {
+        gcs_sync_finish(false, "GPS node param save failed");
+        return;
+    }
+
+    ap_dronecan->send_reboot_request(node_id);
+    gcs_sync_finish(true, "GPS node param synced");
+}
+
+AP_GPS_DroneCAN *AP_GPS_DroneCAN::get_mb_driver(AP_GPS &gps, uint8_t instance)
+{
+    AP_GPS_Backend *backend = gps.get_driver(instance);
+    if (backend == nullptr || !gcs_sync_is_dronecan_mb_type(gps.get_type(instance))) {
+        return nullptr;
+    }
+    return static_cast<AP_GPS_DroneCAN*>(backend);
+}
+
+/*
+  return first DroneCAN bus driver for param access
+ */
+static AP_DroneCAN *gcs_sync_get_dronecan_bus(void)
+{
+    for (uint8_t i = 0; i < AP::can().get_num_drivers(); i++) {
+        AP_DroneCAN *ap_dronecan = AP_DroneCAN::get_dronecan(i);
+        if (ap_dronecan != nullptr) {
+            return ap_dronecan;
+        }
+    }
+    return nullptr;
+}
+
+/*
+  resolve the DroneCAN node for GCS param sync without requiring a
+  running GPS driver. This is required because nodes may not publish
+  armable GPS data until their TYPE is configured.
+ */
+bool AP_GPS_DroneCAN::gcs_sync_resolve_node(AP_GPS &gps, uint8_t instance, AP_DroneCAN *&ap_dronecan, uint8_t &node_id)
+{
+    if (!gcs_sync_is_dronecan_mb_type(gps.get_type(instance))) {
+        return false;
+    }
+
+    AP_GPS_DroneCAN *driver = AP_GPS_DroneCAN::get_mb_driver(gps, instance);
+    if (driver != nullptr) {
+        driver->get_node_info(ap_dronecan, node_id);
+        return ap_dronecan != nullptr && node_id != 0;
+    }
+
+    const uint32_t override_id = (uint32_t)gps.params[instance].override_node_id.get();
+    if (override_id != 0) {
+        ap_dronecan = gcs_sync_get_dronecan_bus();
+        if (ap_dronecan != nullptr) {
+            node_id = override_id;
+            return true;
+        }
+        return false;
+    }
+
+    const uint32_t detected_id = (uint32_t)gps.params[instance].node_id.get();
+    if (detected_id != 0) {
+        ap_dronecan = gcs_sync_get_dronecan_bus();
+        if (ap_dronecan != nullptr) {
+            node_id = detected_id;
+            return true;
+        }
+    }
+
+    WITH_SEMAPHORE(_sem_registry);
+
+    for (uint8_t i = 0; i < GPS_MAX_RECEIVERS; i++) {
+        if (_detected_modules[i].driver != nullptr &&
+            _detected_modules[i].instance == instance) {
+            ap_dronecan = _detected_modules[i].ap_dronecan;
+            node_id = _detected_modules[i].node_id;
+            return true;
+        }
+    }
+
+    uint8_t unassigned_instance = 0;
+    for (int8_t i = GPS_MAX_RECEIVERS - 1; i >= 0; i--) {
+        if (_detected_modules[i].ap_dronecan == nullptr) {
+            continue;
+        }
+        if (_detected_modules[i].driver != nullptr) {
+            continue;
+        }
+        bool reserved = false;
+        for (uint8_t j = 0; j < GPS_MAX_RECEIVERS; j++) {
+            if (j != instance &&
+                gps.params[j].override_node_id.get() != 0 &&
+                gps.params[j].override_node_id.get() == _detected_modules[i].node_id) {
+                reserved = true;
+                break;
+            }
+        }
+        if (reserved) {
+            continue;
+        }
+        if (unassigned_instance == instance) {
+            ap_dronecan = _detected_modules[i].ap_dronecan;
+            node_id = _detected_modules[i].node_id;
+            return true;
+        }
+        unassigned_instance++;
+    }
+
+    return false;
+}
+
+bool AP_GPS_DroneCAN::gcs_sync_work_pending()
+{
+    return gcs_sync_queue_length > 0 || gcs_sync_state.active;
+}
+
+int32_t AP_GPS_DroneCAN::gcs_sync_desired_node_value(AP_GPS &gps, uint8_t instance, GCSNodeSyncKind kind)
+{
+    switch (kind) {
+    case GCSNodeSyncKind::TYPE:
+        switch (gps.get_type(instance)) {
+        case AP_GPS::GPS_TYPE_UAVCAN_RTK_BASE:
+        case AP_GPS::GPS_TYPE_UAVCAN_RTK_ROVER:
+            return (int32_t)gps.get_type(instance);
+        default:
+            return -1;
+        }
+    case GCSNodeSyncKind::GNSS_MODE:
+        return gps.params[instance].gnss_mode.get();
+    }
+    return -1;
+}
+
+void AP_GPS_DroneCAN::get_node_info(AP_DroneCAN *&ap_dronecan, uint8_t &node_id) const
+{
+    ap_dronecan = _detected_modules[_detected_module].ap_dronecan;
+    node_id = _detected_modules[_detected_module].node_id;
+}
+
+bool AP_GPS_DroneCAN::gcs_sync_start_next(AP_GPS &gps)
+{
+    if (gcs_sync_state.active) {
+        return false;
+    }
+
+    GCSNodeSyncRequest request;
+    {
+        WITH_SEMAPHORE(gcs_sync_queue_sem);
+        if (gcs_sync_queue_length == 0) {
+            return false;
+        }
+        request = gcs_sync_queue[0];
+    }
+
+    const uint32_t now_ms = AP_HAL::millis();
+    const bool queue_timed_out = (now_ms - request.queued_ms) > GPS_GCS_NODE_SYNC_QUEUE_TIMEOUT_MS;
+
+    AP_DroneCAN *ap_dronecan = nullptr;
+    uint8_t node_id = 0;
+    if (!AP_GPS_DroneCAN::gcs_sync_resolve_node(gps, request.gps_instance, ap_dronecan, node_id)) {
+        if (queue_timed_out) {
+            gcs_sync_pop_front();
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "GPS %u sync failed, set GPS%u_CAN_OVRIDE", (unsigned)(request.gps_instance + 1), (unsigned)(request.gps_instance + 1));
+            return true;
+        }
+        return false;
+    }
+
+    const int32_t desired = AP_GPS_DroneCAN::gcs_sync_desired_node_value(gps, request.gps_instance, request.kind);
+    if (desired < 0) {
+        gcs_sync_pop_front();
+        return true;
+    }
+
+    const char *param_name = gcs_sync_node_param_name(request.kind);
+    if (param_name == nullptr) {
+        gcs_sync_pop_front();
+        return true;
+    }
+
+    if (!ap_dronecan->get_parameter_on_node(node_id, param_name, &gcs_sync_callbacks.param_int_cb)) {
+        if (queue_timed_out) {
+            gcs_sync_pop_front();
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "GPS %u node sync timeout (CAN busy)", (unsigned)(request.gps_instance + 1));
+            return true;
+        }
+        return false;
+    }
+
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "GPS %u syncing node %u", (unsigned)(request.gps_instance + 1), (unsigned)node_id);
+
+    gcs_sync_pop_front();
+
+    gcs_sync_state.active = true;
+    gcs_sync_state.gps_instance = request.gps_instance;
+    gcs_sync_state.kind = request.kind;
+    gcs_sync_state.step = GCSNodeSyncStep::GET_PARAM;
+    gcs_sync_state.ap_dronecan = ap_dronecan;
+    gcs_sync_state.node_id = node_id;
+    gcs_sync_state.value_changed = false;
+    gcs_sync_state.save_sent = false;
+    gcs_sync_state.step_start_ms = now_ms;
+    return true;
+}
+
+void AP_GPS_DroneCAN::queue_gcs_node_param_sync(uint8_t gps_instance, GCSNodeSyncKind kind)
+{
+    if (gps_instance >= GPS_MAX_RECEIVERS) {
+        return;
+    }
+
+    WITH_SEMAPHORE(gcs_sync_queue_sem);
+
+    for (uint8_t i = 0; i < gcs_sync_queue_length; i++) {
+        if (gcs_sync_queue[i].gps_instance == gps_instance && gcs_sync_queue[i].kind == kind) {
+            gcs_sync_queue[i].queued_ms = AP_HAL::millis();
+            return;
+        }
+    }
+
+    if (gcs_sync_queue_length >= GPS_GCS_NODE_SYNC_QUEUE_SIZE) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "GPS node sync queue full");
+        return;
+    }
+
+    gcs_sync_queue[gcs_sync_queue_length].gps_instance = gps_instance;
+    gcs_sync_queue[gcs_sync_queue_length].kind = kind;
+    gcs_sync_queue[gcs_sync_queue_length].queued_ms = AP_HAL::millis();
+    gcs_sync_queue_length++;
+}
+
+void AP_GPS_DroneCAN::process_gcs_node_param_sync_queue(AP_GPS &gps)
+{
+    if (gcs_sync_state.active) {
+        const uint32_t now_ms = AP_HAL::millis();
+        if (now_ms - gcs_sync_state.step_start_ms > GPS_GCS_NODE_SYNC_TIMEOUT_MS) {
+            gcs_sync_finish(false, "GPS node sync timeout");
+        } else if (gcs_sync_state.step == GCSNodeSyncStep::SAVE &&
+                   gcs_sync_state.value_changed &&
+                   !gcs_sync_state.save_sent &&
+                   gcs_sync_state.ap_dronecan != nullptr) {
+            if (gcs_sync_state.ap_dronecan->save_parameters_on_node(gcs_sync_state.node_id, &gcs_sync_callbacks.param_save_cb)) {
+                gcs_sync_state.save_sent = true;
+                gcs_sync_state.step_start_ms = now_ms;
+            }
+        }
+        if (gcs_sync_state.active) {
+            return;
+        }
+    }
+
+    while (gcs_sync_queue_length > 0) {
+        if (!AP_GPS_DroneCAN::gcs_sync_start_next(gps)) {
+            break;
+        }
+        if (gcs_sync_state.active) {
+            break;
+        }
+    }
+}
 
 #endif // AP_GPS_DRONECAN_ENABLED
