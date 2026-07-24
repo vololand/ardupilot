@@ -309,11 +309,18 @@ bool AP_GPS::needs_uart(GPS_Type type) const
     case GPS_TYPE_NONE:
     case GPS_TYPE_HIL:
     case GPS_TYPE_UAVCAN:
-    case GPS_TYPE_UAVCAN_RTK_BASE:
-    case GPS_TYPE_UAVCAN_RTK_ROVER:
     case GPS_TYPE_MAV:
     case GPS_TYPE_MSP:
     case GPS_TYPE_EXTERNAL_AHRS:
+        return false;
+#if defined(HAL_BUILD_AP_PERIPH) && HAL_BUILD_AP_PERIPH
+    // on GPS CAN nodes store DroneCAN MB types but drive u-blox over UART
+    case GPS_TYPE_UAVCAN_RTK_BASE:
+    case GPS_TYPE_UAVCAN_RTK_ROVER:
+        return true;
+#endif
+    case GPS_TYPE_UAVCAN_RTK_BASE:
+    case GPS_TYPE_UAVCAN_RTK_ROVER:
         return false;
     default:
         break;
@@ -546,7 +553,12 @@ void AP_GPS::send_blob_start(uint8_t instance)
 
 #if GPS_MOVING_BASELINE && AP_GPS_UBLOX_ENABLED
     if ((type == GPS_TYPE_UBLOX_RTK_BASE ||
-         type == GPS_TYPE_UBLOX_RTK_ROVER) &&
+         type == GPS_TYPE_UBLOX_RTK_ROVER
+#if defined(HAL_BUILD_AP_PERIPH) && HAL_BUILD_AP_PERIPH
+         || type == GPS_TYPE_UAVCAN_RTK_BASE ||
+         type == GPS_TYPE_UAVCAN_RTK_ROVER
+#endif
+         ) &&
         !option_set(DriverOptions::UBX_MBUseUart2)) {
         // we use 460800 when doing moving baseline as we need
         // more bandwidth. We don't do this if using UART2, as
@@ -777,11 +789,20 @@ AP_GPS_Backend *AP_GPS::_detect_instance(const uint8_t instance)
 
         const uint32_t ublox_mb_required_baud = option_set(DriverOptions::UBX_MBUseUart2)?230400:460800;
         if ((type == GPS_TYPE_UBLOX_RTK_BASE ||
-             type == GPS_TYPE_UBLOX_RTK_ROVER) &&
+             type == GPS_TYPE_UBLOX_RTK_ROVER
+#if defined(HAL_BUILD_AP_PERIPH) && HAL_BUILD_AP_PERIPH
+             || type == GPS_TYPE_UAVCAN_RTK_BASE ||
+             type == GPS_TYPE_UAVCAN_RTK_ROVER
+#endif
+             ) &&
             _baudrates[dstate->current_baud] == ublox_mb_required_baud &&
             AP_GPS_UBLOX::_detect(dstate->ublox_detect_state, data)) {
             GPS_Role role;
-            if (type == GPS_TYPE_UBLOX_RTK_BASE) {
+            if (type == GPS_TYPE_UBLOX_RTK_BASE
+#if defined(HAL_BUILD_AP_PERIPH) && HAL_BUILD_AP_PERIPH
+                || type == GPS_TYPE_UAVCAN_RTK_BASE
+#endif
+                ) {
                 role = GPS_ROLE_MB_BASE;
             } else {
                 role = GPS_ROLE_MB_ROVER;
@@ -1091,6 +1112,10 @@ void AP_GPS::update(void)
     // update notify with gps status. We always base this on the primary_instance
     AP_Notify::flags.gps_status = state[primary_instance].status;
     AP_Notify::flags.gps_num_sats = state[primary_instance].num_sats;
+#endif
+
+#if AP_GPS_DRONECAN_ENABLED
+    AP_GPS_DroneCAN::process_gcs_node_param_sync_queue(*this);
 #endif
 }
 
@@ -2193,6 +2218,48 @@ bool AP_GPS::gps_yaw_deg(uint8_t instance, float &yaw_deg, float &accuracy_deg, 
 /*
  * end old parameter metadata
  */
+
+void AP_GPS::handle_gcs_param_write(const char *param_name)
+{
+#if AP_GPS_DRONECAN_ENABLED
+    uint8_t instance;
+    AP_GPS_DroneCAN::GCSNodeSyncKind kind;
+
+    if (strcmp(param_name, "GPS1_TYPE") == 0) {
+        instance = 0;
+        kind = AP_GPS_DroneCAN::GCSNodeSyncKind::TYPE;
+    } else if (strcmp(param_name, "GPS2_TYPE") == 0) {
+        instance = 1;
+        kind = AP_GPS_DroneCAN::GCSNodeSyncKind::TYPE;
+    } else if (strcmp(param_name, "GPS1_GNSS_MODE") == 0) {
+        instance = 0;
+        kind = AP_GPS_DroneCAN::GCSNodeSyncKind::GNSS_MODE;
+        if (params[instance].gnss_mode.get() == 0) {
+            return;
+        }
+    } else if (strcmp(param_name, "GPS2_GNSS_MODE") == 0) {
+        instance = 1;
+        kind = AP_GPS_DroneCAN::GCSNodeSyncKind::GNSS_MODE;
+        if (params[instance].gnss_mode.get() == 0) {
+            return;
+        }
+    } else {
+        return;
+    }
+
+    if (instance >= GPS_MAX_RECEIVERS) {
+        return;
+    }
+
+    const GPS_Type type = get_type(instance);
+    if (type != GPS_TYPE_UAVCAN_RTK_BASE && type != GPS_TYPE_UAVCAN_RTK_ROVER) {
+        return;
+    }
+
+    AP_GPS_DroneCAN::queue_gcs_node_param_sync(instance, kind);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "GPS %u node sync queued", (unsigned)(instance + 1));
+#endif
+}
 
 namespace AP {
 
