@@ -671,8 +671,9 @@ bool AP_GPS_DroneCAN::do_config()
     
     switch(cfg_step) {
         case STEP_SET_TYPE:
-            // TYPE sync to DroneCAN GPS nodes is handled when GCS writes params
-            cfg_step++;
+            // GPS_TYPE was renamed GPS1_TYPE. Request both and handle whichever we receive.
+            ap_dronecan->get_parameter_on_node(node_id, "GPS_TYPE", &param_int_cb);
+            ap_dronecan->get_parameter_on_node(node_id, "GPS1_TYPE", &param_int_cb);
             break;
         case STEP_SET_MB_CAN_TX:
             if (role != AP_GPS::GPS_Role::GPS_ROLE_NORMAL) {
@@ -958,9 +959,10 @@ public:
 
 static GCSNodeSyncCallbacks gcs_sync_callbacks;
 
-static bool gcs_sync_is_dronecan_mb_type(AP_GPS::GPS_Type type)
+static bool gcs_sync_is_supported_fc_type(AP_GPS::GPS_Type type)
 {
-    return type == AP_GPS::GPS_TYPE_UAVCAN_RTK_BASE ||
+    return type == AP_GPS::GPS_TYPE_UAVCAN ||
+           type == AP_GPS::GPS_TYPE_UAVCAN_RTK_BASE ||
            type == AP_GPS::GPS_TYPE_UAVCAN_RTK_ROVER;
 }
 
@@ -1052,7 +1054,7 @@ void GCSNodeSyncCallbacks::handle_param_save(AP_DroneCAN *ap_dronecan, uint8_t n
 AP_GPS_DroneCAN *AP_GPS_DroneCAN::get_mb_driver(AP_GPS &gps, uint8_t instance)
 {
     AP_GPS_Backend *backend = gps.get_driver(instance);
-    if (backend == nullptr || !gcs_sync_is_dronecan_mb_type(gps.get_type(instance))) {
+    if (backend == nullptr || !gcs_sync_is_supported_fc_type(gps.get_type(instance))) {
         return nullptr;
     }
     return static_cast<AP_GPS_DroneCAN*>(backend);
@@ -1079,7 +1081,7 @@ static AP_DroneCAN *gcs_sync_get_dronecan_bus(void)
  */
 bool AP_GPS_DroneCAN::gcs_sync_resolve_node(AP_GPS &gps, uint8_t instance, AP_DroneCAN *&ap_dronecan, uint8_t &node_id)
 {
-    if (!gcs_sync_is_dronecan_mb_type(gps.get_type(instance))) {
+    if (!gcs_sync_is_supported_fc_type(gps.get_type(instance))) {
         return false;
     }
 
@@ -1159,10 +1161,14 @@ int32_t AP_GPS_DroneCAN::gcs_sync_desired_node_value(AP_GPS &gps, uint8_t instan
 {
     switch (kind) {
     case GCSNodeSyncKind::TYPE:
+        // FC DroneCAN types map to node u-blox driver types
         switch (gps.get_type(instance)) {
+        case AP_GPS::GPS_TYPE_UAVCAN:
+            return (int32_t)AP_GPS::GPS_TYPE_UBLOX;
         case AP_GPS::GPS_TYPE_UAVCAN_RTK_BASE:
+            return (int32_t)AP_GPS::GPS_TYPE_UBLOX_RTK_BASE;
         case AP_GPS::GPS_TYPE_UAVCAN_RTK_ROVER:
-            return (int32_t)gps.get_type(instance);
+            return (int32_t)AP_GPS::GPS_TYPE_UBLOX_RTK_ROVER;
         default:
             return -1;
         }

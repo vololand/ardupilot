@@ -2252,7 +2252,9 @@ void AP_GPS::handle_gcs_param_write(const char *param_name)
     }
 
     const GPS_Type type = get_type(instance);
-    if (type != GPS_TYPE_UAVCAN_RTK_BASE && type != GPS_TYPE_UAVCAN_RTK_ROVER) {
+    if (type != GPS_TYPE_UAVCAN &&
+        type != GPS_TYPE_UAVCAN_RTK_BASE &&
+        type != GPS_TYPE_UAVCAN_RTK_ROVER) {
         return;
     }
 
