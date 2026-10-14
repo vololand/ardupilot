@@ -14,6 +14,7 @@
 #endif
 
 extern const AP_HAL::HAL &hal;
+extern const app_descriptor_t app_descriptor;
 
 /*
   find public keys in bootloader, or return NULL if signature not found
@@ -32,6 +33,24 @@ const struct ap_secure_data *AP_CheckFirmware::find_public_keys(void)
     return nullptr;
 #endif
 }
+
+#if HAL_GCS_ENABLED
+/*
+  The signed bootloader only jumps here after check_firmware_signature()
+  succeeds. Tell the GCS in English once MAVLink is up.
+ */
+void AP_CheckFirmware::send_boot_signature_verified(void)
+{
+    const struct ap_secure_data *keys = find_public_keys();
+    if (keys == nullptr || all_zero_keys(keys)) {
+        return;
+    }
+    if (app_descriptor.signature_length != 72) {
+        return;
+    }
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Firmware signature verification complete");
+}
+#endif
 
 /*
   return true if all keys are zeros

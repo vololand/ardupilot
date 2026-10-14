@@ -24,6 +24,7 @@
 #include "GCS.h"
 #include <AP_Logger/AP_Logger.h>
 #include <AP_BoardConfig/AP_BoardConfig.h>
+#include <AP_GPS/AP_GPS.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -311,6 +312,12 @@ void GCS_MAVLINK::handle_param_set(const mavlink_message_t &msg)
     AP_Logger *logger = AP_Logger::get_singleton();
     if (logger != nullptr) {
         logger->Write_Parameter(key, vp->cast_to_float(var_type));
+    }
+#endif
+
+#if AP_GPS_ENABLED
+    if (force_save) {
+        AP::gps().handle_gcs_param_write(key);
     }
 #endif
 }

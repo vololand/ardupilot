@@ -70,7 +70,27 @@ public:
     static bool instance_exists(const AP_DroneCAN* ap_dronecan);
 #endif
 
+    enum class GCSNodeSyncKind : uint8_t {
+        TYPE = 0,
+        GNSS_MODE = 1,
+    };
+
+    static void queue_gcs_node_param_sync(uint8_t gps_instance, GCSNodeSyncKind kind);
+    static void process_gcs_node_param_sync_queue(AP_GPS &gps);
+    static int32_t gcs_sync_desired_node_value(AP_GPS &gps, uint8_t instance, GCSNodeSyncKind kind);
+    static bool gcs_sync_work_pending();
+
 private:
+
+    bool do_config_finished() const {
+        return cfg_step >= STEP_FINISHED;
+    }
+
+    void get_node_info(AP_DroneCAN *&ap_dronecan, uint8_t &node_id) const;
+
+    static AP_GPS_DroneCAN *get_mb_driver(AP_GPS &gps, uint8_t instance);
+    static bool gcs_sync_resolve_node(AP_GPS &gps, uint8_t instance, AP_DroneCAN *&ap_dronecan, uint8_t &node_id);
+    static bool gcs_sync_start_next(AP_GPS &gps);
 
     bool param_configured = true;
     enum config_step {

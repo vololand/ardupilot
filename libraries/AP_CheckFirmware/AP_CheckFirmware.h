@@ -163,6 +163,10 @@ public:
     static bool set_public_keys(uint8_t key_idx, uint8_t num_keys, const uint8_t *key_data);
     static bool all_zero_keys(const struct ap_secure_data *sec_data);
     static bool check_signed_bootloader(const uint8_t *fw, uint32_t fw_size);
+#if AP_SIGNED_FIRMWARE && HAL_GCS_ENABLED
+    // Bootloader already accepted this signed image. Report that once MAVLink is up.
+    static void send_boot_signature_verified(void);
+#endif
 
 private:
 #if HAL_GCS_ENABLED

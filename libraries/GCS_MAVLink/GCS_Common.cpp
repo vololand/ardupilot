@@ -47,6 +47,7 @@
 #include <AP_RCTelemetry/AP_Spektrum_Telem.h>
 #include <AP_Mount/AP_Mount.h>
 #include <AP_Common/AP_FWVersion.h>
+#include <AP_CheckFirmware/AP_CheckFirmware.h>
 #include <AP_VisualOdom/AP_VisualOdom.h>
 #include <AP_Baro/AP_Baro.h>
 #include <AP_EFI/AP_EFI.h>
@@ -4572,6 +4573,11 @@ void GCS_MAVLINK::handle_send_autopilot_version(const mavlink_message_t &msg)
 
 void GCS_MAVLINK::send_banner()
 {
+#if AP_CHECK_FIRMWARE_ENABLED && AP_SIGNED_FIRMWARE && HAL_GCS_ENABLED
+    // Queued before fw_string so the signature result appears first.
+    AP_CheckFirmware::send_boot_signature_verified();
+#endif
+
     // mark the firmware version in the tlog
     const AP_FWVersion &fwver = AP::fwversion();
 

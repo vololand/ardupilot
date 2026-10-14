@@ -93,7 +93,8 @@ const AP_ToneAlarm::Tone AP_ToneAlarm::_tones[] {
 #define AP_NOTIFY_TONE_QUIET_NOT_READY_OR_NOT_FINISHED 28
     { "MFT200L4<B#4A#6G#6", false },
 #define AP_NOTIFY_TONE_STARTUP 29
-    { "MFT240L8O4aO5dcO4aO5dcO4aO5dcL16dcdcdcdc", false },
+	{ "MFT240L4O4B.B8BP4AB>C2O4A.A8AP4GAB2B.B8BP4AB>C2O4BGAF#G2.", false },
+    //{ "MFT240L8O4aO5dcO4aO5dcO4aO5dcL16dcdcdcdc", false },
 #define AP_NOTIFY_TONE_NO_SDCARD 30
     { "MNBGG", false },
 #define AP_NOTIFY_TONE_EKF_ALERT 31

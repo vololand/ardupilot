@@ -602,6 +602,9 @@ public:
     uint8_t get_auto_switch_type() const { return _auto_switch; }
 #endif
 
+    // sync DroneCAN GPS node params after GCS writes a GPS parameter
+    void handle_gcs_param_write(const char *param_name);
+
 protected:
 
     // configuration parameters
@@ -718,6 +721,13 @@ private:
     // run detection step for one GPS instance. If this finds a GPS then it
     // will return it - otherwise nullptr
     AP_GPS_Backend *_detect_instance(uint8_t instance);
+
+    AP_GPS_Backend *get_driver(uint8_t instance) const {
+        if (instance >= GPS_MAX_RECEIVERS) {
+            return nullptr;
+        }
+        return drivers[instance];
+    }
 
     void update_instance(uint8_t instance);
 
