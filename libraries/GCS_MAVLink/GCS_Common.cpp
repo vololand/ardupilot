@@ -62,6 +62,7 @@
 #include <AP_RPM/AP_RPM.h>
 #include <AP_AIS/AP_AIS.h>
 #include <AP_Filesystem/AP_Filesystem.h>
+#include <AP_GCS_Auth/AP_GCS_Auth.h>
 #include <AP_Frsky_Telem/AP_Frsky_Telem.h>
 #include <RC_Channel/RC_Channel.h>
 #include <AP_VisualOdom/AP_VisualOdom.h>
@@ -4177,6 +4178,11 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
         handle_setup_signing(msg);
         break;
 
+    case MAVLINK_MSG_ID_AUTH_REQUEST:
+    case MAVLINK_MSG_ID_AUTH_RESPONSE:
+        AP_GCS_Auth::get_singleton().handle_message(*this, msg);
+        break;
+
     case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:
     case MAVLINK_MSG_ID_PARAM_SET:
     case MAVLINK_MSG_ID_PARAM_REQUEST_READ:
@@ -6779,6 +6785,10 @@ uint32_t GCS_MAVLINK::correct_offboard_timestamp_usec_to_ms(uint64_t offboard_us
 bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
                                 const mavlink_message_t &msg) const
 {
+    if (!AP_GCS_Auth::get_singleton().is_message_allowed(chan, msg.msgid)) {
+        return false;
+    }
+
     if (msg.sysid == mavlink_system.sysid) {
         // accept packets from our own components
         // (e.g. mavlink-connected companion computers)

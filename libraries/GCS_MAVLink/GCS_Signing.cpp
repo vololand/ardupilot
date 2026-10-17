@@ -20,8 +20,44 @@
 #if HAL_GCS_ENABLED
 
 #include "GCS.h"
+#include <AP_GCS_Auth/AP_GCS_Auth.h>
 
 extern const AP_HAL::HAL& hal;
+
+namespace {
+bool is_actual_usb_uart_channel(mavlink_channel_t chan)
+{
+    if (chan >= MAVLINK_COMM_NUM_BUFFERS) {
+        return false;
+    }
+
+    const uint8_t ofs = uint8_t(chan - MAVLINK_COMM_0);
+    GCS_MAVLINK *link = gcs().chan(ofs);
+    if (link == nullptr) {
+        return false;
+    }
+
+    AP_HAL::UARTDriver *uart = link->get_uart();
+    return (uart != nullptr) && (uart->get_usb_baud() != 0);
+}
+
+void refresh_outgoing_signing_flag(mavlink_channel_t chan, mavlink_status_t *status)
+{
+    if (status == nullptr || status->signing == nullptr) {
+        return;
+    }
+
+    // IMPORTANT:
+    // Disable outgoing signing only on the actual USB UART link.
+    // Do not reuse AUTH fallback logic (e.g. chan0 + usb_connected), otherwise
+    // non-USB serial links can lose signing when USB is plugged in.
+    if (is_actual_usb_uart_channel(chan)) {
+        status->signing->flags &= ~MAVLINK_SIGNING_FLAG_SIGN_OUTGOING;
+    } else {
+        status->signing->flags |= MAVLINK_SIGNING_FLAG_SIGN_OUTGOING;
+    }
+}
+}
 
 // storage object
 StorageAccess GCS_MAVLINK::_signing_storage(StorageManager::StorageKeys);
@@ -113,18 +149,35 @@ static const uint32_t accept_list[] = {
     
 static bool accept_unsigned_callback(const mavlink_status_t *status, uint32_t msgId)
 {
-    if (status == mavlink_get_channel_status(MAVLINK_COMM_0)) {
-        // always accept channel 0, assumed to be secure channel. This
-        // is USB on PX4 boards
-        return true;
-    }
     for (uint8_t i=0; i<ARRAY_SIZE(accept_list); i++) {
         if (accept_list[i] == msgId) {
             return true;
         }
     }
-    return false;
+    return AP_GCS_Auth::get_singleton().allow_unsigned_message(status, msgId);
 }
+}
+
+void GCS_MAVLINK::apply_signing_key(const uint8_t secret_key[32], uint64_t initial_timestamp)
+{
+    struct SigningKey key {};
+    key.magic = SIGNING_KEY_MAGIC;
+    key.timestamp = initial_timestamp;
+    memcpy(key.secret_key, secret_key, sizeof(key.secret_key));
+
+    if (!signing_key_save(key)) {
+        send_text(MAV_SEVERITY_WARNING, "ERROR: Failed to save signing key");
+        return;
+    }
+
+    // activate immediately on all links
+    for (uint8_t i=0; i<MAVLINK_COMM_NUM_BUFFERS; i++) {
+        GCS_MAVLINK *backend = gcs().chan(i);
+        if (backend == nullptr) {
+            continue;
+        }
+        backend->load_signing_key();
+    }
 }
 
 /*
@@ -160,6 +213,7 @@ void GCS_MAVLINK::load_signing_key(void)
     } else {
         _channel_status.signing = &signing;
         _channel_status.signing_streams = &signing_streams;
+        refresh_outgoing_signing_flag(chan, &_channel_status);
     }
 }
 
@@ -231,7 +285,8 @@ void GCS_MAVLINK::save_signing_timestamp(bool force_save_now)
  */
 bool GCS_MAVLINK::signing_enabled(void) const
 {
-    const mavlink_status_t *status = mavlink_get_channel_status(chan);
+    mavlink_status_t *status = mavlink_get_channel_status(chan);
+    refresh_outgoing_signing_flag(chan, status);
     if (status->signing && (status->signing->flags & MAVLINK_SIGNING_FLAG_SIGN_OUTGOING)) {
         return true;
     }
@@ -256,7 +311,8 @@ uint8_t GCS_MAVLINK::packet_overhead_chan(mavlink_channel_t chan)
         reserve_param_space_start_ms = 0;
     }
     
-    const mavlink_status_t *status = mavlink_get_channel_status(chan);
+    mavlink_status_t *status = mavlink_get_channel_status(chan);
+    refresh_outgoing_signing_flag(chan, status);
     if (status->signing && (status->signing->flags & MAVLINK_SIGNING_FLAG_SIGN_OUTGOING)) {
         return MAVLINK_NUM_NON_PAYLOAD_BYTES + MAVLINK_SIGNATURE_BLOCK_LEN + reserved_space;
     }
