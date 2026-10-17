@@ -171,23 +171,58 @@ void AP_GCS_Auth::sha256_32_3(const uint8_t *buf1, uint32_t len1,
     sha256_final_32(&ctx, out);
 }
 
-bool AP_GCS_Auth::find_user_record(GCS_MAVLINK &link, const char user_id[USER_ID_LEN], AuthRecord &record) const
+void AP_GCS_Auth::send_exit_code(GCS_MAVLINK &link, AuthExitCode code)
+{
+    const char *name;
+    switch (code) {
+    case AUTH_EXIT_SUCCESS:      name = "AUTH_EXIT_SUCCESS"; break;
+    case AUTH_EXIT_INVALID_ARGS: name = "AUTH_EXIT_INVALID_ARGS"; break;
+    case AUTH_EXIT_FILE_ERROR:   name = "AUTH_EXIT_FILE_ERROR"; break;
+    case AUTH_EXIT_INVALID_DB:   name = "AUTH_EXIT_INVALID_DB"; break;
+    case AUTH_EXIT_NOT_FOUND:    name = "AUTH_EXIT_NOT_FOUND"; break;
+    case AUTH_EXIT_EXISTS:       name = "AUTH_EXIT_EXISTS"; break;
+    case AUTH_EXIT_PW_MISMATCH:  name = "AUTH_EXIT_PW_MISMATCH"; break;
+    case AUTH_EXIT_CRYPTO_ERROR: name = "AUTH_EXIT_CRYPTO_ERROR"; break;
+    default:                     name = "AUTH_EXIT_UNKNOWN"; break;
+    }
+
+    const MAV_SEVERITY sev = (code == AUTH_EXIT_SUCCESS) ? MAV_SEVERITY_INFO : MAV_SEVERITY_WARNING;
+    // Parseable form for GCS: AUTH_EXIT_SUCCESS=0
+    link.send_text(sev, "%s=%u", name, unsigned(code));
+    GCS_SEND_TEXT(sev, "%s=%u", name, unsigned(code));
+}
+
+AP_GCS_Auth::DbLookupStatus AP_GCS_Auth::find_user_record(GCS_MAVLINK &link, const char user_id[USER_ID_LEN], AuthRecord &record) const
 {
     const char *paths[] = { AUTH_DB_PRIMARY, AUTH_DB_FALLBACK };
+    bool any_open_ok = false;
+    bool saw_invalid_db = false;
+
     for (const char *path : paths) {
         int fd = AP::FS().open(path, O_RDONLY, true);
         if (fd < 0) {
             link.send_text(MAV_SEVERITY_WARNING, "AUTH_link: auth db open failed path=%s", path);
-			GCS_SEND_TEXT( MAV_SEVERITY_WARNING, "AUTH_GCS: auth db open failed path=%s", path);
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "AUTH_GCS: auth db open failed path=%s", path);
             continue;
         }
+        any_open_ok = true;
         link.send_text(MAV_SEVERITY_INFO, "AUTH_link: auth db open ok path=%s", path);
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: auth db open ok path=%s", path);
 
         for (uint8_t i = 0; i < MAX_USERS; i++) {
             AuthRecord rec {};
             const int32_t n = AP::FS().read(fd, &rec, sizeof(rec));
+            if (n == 0) {
+                break;
+            }
             if (n != int32_t(sizeof(rec))) {
+                saw_invalid_db = true;
+                link.send_text(MAV_SEVERITY_WARNING,
+                               "AUTH_link: auth db size mismatch path=%s n=%ld",
+                               path, (long)n);
+                GCS_SEND_TEXT(MAV_SEVERITY_WARNING,
+                              "AUTH_GCS: auth db size mismatch path=%s n=%ld",
+                              path, (long)n);
                 break;
             }
             if (rec.user_id[0] == 0) {
@@ -198,12 +233,19 @@ bool AP_GCS_Auth::find_user_record(GCS_MAVLINK &link, const char user_id[USER_ID
             if (memcmp(normalized, user_id, USER_ID_LEN) == 0) {
                 AP::FS().close(fd);
                 record = rec;
-                return true;
+                return DbLookupStatus::OK;
             }
         }
         AP::FS().close(fd);
     }
-    return false;
+
+    if (!any_open_ok) {
+        return DbLookupStatus::FILE_ERROR;
+    }
+    if (saw_invalid_db) {
+        return DbLookupStatus::INVALID_DB;
+    }
+    return DbLookupStatus::NOT_FOUND;
 }
 
 bool AP_GCS_Auth::is_login_msg(uint32_t msgid)
@@ -245,6 +287,7 @@ void AP_GCS_Auth::clear_channel_auth(mavlink_channel_t chan)
     }
     _sessions[chan].authenticated = false;
     _sessions[chan].pending = false;
+    _sessions[chan].user_known = false;
 }
 
 bool AP_GCS_Auth::is_message_allowed(mavlink_channel_t chan, uint32_t msgid) const
@@ -288,6 +331,7 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
                       "AUTH_GCS: target mismatch req=%u self=%u",
                       unsigned(pkt.target_system),
                       unsigned(mavlink_system.sysid));
+        send_exit_code(link, AUTH_EXIT_INVALID_ARGS);
         return true;
     }
 
@@ -299,6 +343,7 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
         link.apply_signing_key(random_key, AP_HAL::micros64()/10ULL);
         link.send_text(MAV_SEVERITY_INFO, "AUTH_link: logout accepted (ch=%u)", unsigned(link.get_chan()));
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: logout accepted (ch=%u)", unsigned(link.get_chan()));
+        send_exit_code(link, AUTH_EXIT_SUCCESS);
 
         mavlink_auth_result_t result {};
         result.result = MAV_AUTH_RESULT_ACCEPTED;
@@ -309,6 +354,7 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
     if (pkt.request_type != MAV_AUTH_TYPE_LOGIN) {
         link.send_text(MAV_SEVERITY_WARNING, "AUTH_link: unsupported request type=%u", unsigned(pkt.request_type));
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "AUTH_GCS: unsupported request type=%u", unsigned(pkt.request_type));
+        send_exit_code(link, AUTH_EXIT_INVALID_ARGS);
         mavlink_auth_result_t result {};
         result.result = MAV_AUTH_RESULT_FAILED;
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
@@ -317,20 +363,42 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
 
     char user_id[USER_ID_LEN] {};
     normalize_user_id(pkt.user_id, user_id);
+    if (user_id[0] == 0) {
+        link.send_text(MAV_SEVERITY_WARNING, "AUTH_link: empty user_id");
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "AUTH_GCS: empty user_id");
+        send_exit_code(link, AUTH_EXIT_INVALID_ARGS);
+        mavlink_auth_result_t result {};
+        result.result = MAV_AUTH_RESULT_FAILED;
+        mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+        return true;
+    }
 
     AuthRecord rec {};
-    const bool user_found = find_user_record(link, user_id, rec);
+    const DbLookupStatus lookup = find_user_record(link, user_id, rec);
+    const bool user_found = (lookup == DbLookupStatus::OK);
     if (user_found) {
         link.send_text(MAV_SEVERITY_INFO, "AUTH_link: login request user='%s'", user_id);
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: login request user='%s'", user_id);
     } else {
-        // avoid user-enumeration details to remote peer; keep this only as local debug text.
         link.send_text(MAV_SEVERITY_INFO, "AUTH_link: login request unknown user");
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: login request unknown user");
+        switch (lookup) {
+        case DbLookupStatus::FILE_ERROR:
+            send_exit_code(link, AUTH_EXIT_FILE_ERROR);
+            break;
+        case DbLookupStatus::INVALID_DB:
+            send_exit_code(link, AUTH_EXIT_INVALID_DB);
+            break;
+        case DbLookupStatus::NOT_FOUND:
+        default:
+            send_exit_code(link, AUTH_EXIT_NOT_FOUND);
+            break;
+        }
     }
 
     session.pending = true;
     session.authenticated = false;
+    session.user_known = user_found;
     session.timestamp_ms = AP_HAL::millis();
     session.retries_left = AUTH_MAX_RETRIES;
     memcpy(session.user_id, user_id, USER_ID_LEN);
@@ -378,8 +446,10 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
             link.send_text(MAV_SEVERITY_WARNING, "AUTH_link: response timeout");
             GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "AUTH_GCS: response timeout");
         }
+        send_exit_code(link, AUTH_EXIT_INVALID_ARGS);
         session.pending = false;
         session.authenticated = false;
+        session.user_known = false;
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
         return true;
     }
@@ -400,6 +470,17 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
                        unsigned(session.retries_left));
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "AUTH_GCS: bad response retries_left=%u",
                        unsigned(session.retries_left));
+        // Unknown-user logins use a decoy hash; report NOT_FOUND rather than PW_MISMATCH.
+        send_exit_code(link, session.user_known ? AUTH_EXIT_PW_MISMATCH : AUTH_EXIT_NOT_FOUND);
+        session.authenticated = false;
+        mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+        return true;
+    }
+
+    // Decoy-hash path must never accept (const-time compare should already reject).
+    if (!session.user_known) {
+        send_exit_code(link, AUTH_EXIT_NOT_FOUND);
+        session.pending = false;
         session.authenticated = false;
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
         return true;
@@ -420,6 +501,7 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
     link.apply_signing_key(signing_key, AP_HAL::micros64()/10ULL);
     link.send_text(MAV_SEVERITY_INFO, "AUTH_link: accepted user='%s' signing_key applied", session.user_id);
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: accepted user='%s' signing_key applied", session.user_id);
+    send_exit_code(link, AUTH_EXIT_SUCCESS);
 
     return true;
 }

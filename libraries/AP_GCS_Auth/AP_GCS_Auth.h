@@ -8,6 +8,18 @@
 
 class GCS_MAVLINK;
 
+// Shared AUTH diagnostic codes for GCS STATUSTEXT: "AUTH_EXIT_<NAME>=N"
+enum AuthExitCode : uint8_t {
+    AUTH_EXIT_SUCCESS       = 0,  // success
+    AUTH_EXIT_INVALID_ARGS  = 1,  // invalid args / protocol state / user_id format
+    AUTH_EXIT_FILE_ERROR    = 2,  // auth.dat file I/O error
+    AUTH_EXIT_INVALID_DB    = 3,  // DB corrupted (size mismatch)
+    AUTH_EXIT_NOT_FOUND     = 4,  // user not found
+    AUTH_EXIT_EXISTS        = 5,  // user already exists (DB tool; unused on FC login)
+    AUTH_EXIT_PW_MISMATCH   = 6,  // password / response mismatch
+    AUTH_EXIT_CRYPTO_ERROR  = 7,  // crypto / signing key error
+};
+
 class AP_GCS_Auth {
 public:
     static AP_GCS_Auth &get_singleton();
@@ -35,6 +47,7 @@ private:
     struct AuthSession {
         bool pending = false;
         bool authenticated = false;
+        bool user_known = false;
         uint8_t challenge[CHALLENGE_LEN] {};
         uint8_t expected_pw_hash[PW_HASH_LEN] {};
         char user_id[USER_ID_LEN] {};
@@ -42,12 +55,20 @@ private:
         uint8_t retries_left = 0;
     };
 
+    enum class DbLookupStatus : uint8_t {
+        OK = 0,
+        FILE_ERROR,
+        INVALID_DB,
+        NOT_FOUND,
+    };
+
     AuthSession _sessions[MAVLINK_COMM_NUM_BUFFERS];
 
     bool handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_request_t &pkt);
     bool handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_response_t &pkt);
 
-    bool find_user_record(GCS_MAVLINK &link, const char user_id[USER_ID_LEN], AuthRecord &record) const;
+    DbLookupStatus find_user_record(GCS_MAVLINK &link, const char user_id[USER_ID_LEN], AuthRecord &record) const;
+    static void send_exit_code(GCS_MAVLINK &link, AuthExitCode code);
     static void fill_random_bytes(uint8_t *buf, uint8_t len);
     static void normalize_user_id(const char in[USER_ID_LEN], char out[USER_ID_LEN]);
     static bool is_login_msg(uint32_t msgid);
