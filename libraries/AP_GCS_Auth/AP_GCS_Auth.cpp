@@ -9,6 +9,27 @@
 
 extern const AP_HAL::HAL &hal;
 
+AP_GCS_Auth *AP_GCS_Auth::_singleton;
+
+const AP_Param::GroupInfo AP_GCS_Auth::var_info[] = {
+    // @Param: SIGNING
+    // @DisplayName: AUTH MAVLink2 signing after login
+    // @Description: Controls whether a successful AUTH login enables MAVLink2 signing. 0: login opens the session gate only; MAVLink remains unsigned both ways. 1: derive signing key K on login and require/enable MAVLink2 signing.
+    // @Values: 0:Disabled,1:Enabled
+    // @User: Standard
+    AP_GROUPINFO("SIGNING", 1, AP_GCS_Auth, _signing, 0),
+
+    AP_GROUPEND
+};
+
+AP_GCS_Auth::AP_GCS_Auth()
+{
+    if (_singleton == nullptr) {
+        _singleton = this;
+    }
+    AP_Param::setup_object_defaults(this, var_info);
+}
+
 struct mavlink_sha256_ctx {
     uint32_t sz[2];
     uint32_t counter[8];
@@ -111,8 +132,12 @@ uint8_t user_id_byte_len(const char user_id[USER_ID_LEN])
 
 AP_GCS_Auth &AP_GCS_Auth::get_singleton()
 {
-    static AP_GCS_Auth instance;
-    return instance;
+    if (_singleton == nullptr) {
+        // Examples / builds without a vehicle-owned instance
+        static AP_GCS_Auth fallback;
+        (void)fallback;
+    }
+    return *_singleton;
 }
 
 void AP_GCS_Auth::fill_random_bytes(uint8_t *buf, uint8_t len)
@@ -314,7 +339,12 @@ bool AP_GCS_Auth::allow_unsigned_message(const mavlink_status_t *status, uint32_
             if (is_usb_auth_bypass_channel(mavlink_channel_t(MAVLINK_COMM_0 + i))) {
                 return true;
             }
-            return !_sessions[i].authenticated && is_pre_auth_allowed_msg(msgid);
+            if (_sessions[i].authenticated) {
+                // AUTH_SIGNING=0: session open, accept unsigned MAVLink both ways
+                // AUTH_SIGNING=1: require signed frames after login
+                return !mavlink_signing_enabled();
+            }
+            return false;
         }
     }
     return false;
@@ -338,9 +368,14 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
     auto &session = _sessions[link.get_chan()];
     if (pkt.request_type == MAV_AUTH_TYPE_LOGOUT) {
         clear_channel_auth(link.get_chan());
-        uint8_t random_key[32] {};
-        fill_random_bytes(random_key, sizeof(random_key));
-        link.apply_signing_key(random_key, AP_HAL::micros64()/10ULL);
+        if (mavlink_signing_enabled()) {
+            // Invalidate previous session signing key
+            uint8_t random_key[32] {};
+            fill_random_bytes(random_key, sizeof(random_key));
+            link.apply_signing_key(random_key, AP_HAL::micros64()/10ULL);
+        } else {
+            link.clear_signing_key();
+        }
         link.send_text(MAV_SEVERITY_INFO, "AUTH_link: logout accepted (ch=%u)", unsigned(link.get_chan()));
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: logout accepted (ch=%u)", unsigned(link.get_chan()));
         send_exit_code(link, AUTH_EXIT_SUCCESS);
@@ -491,16 +526,23 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
     result.result = MAV_AUTH_RESULT_ACCEPTED;
     mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
 
-    // K = SHA256(user_id_utf8 + H + challenge) — GCS LoginDrone 와 동일 (userid 가변 길이)
-    const uint8_t uid_len = user_id_byte_len(session.user_id);
-    uint8_t signing_key[32] {};
-    sha256_32_3(reinterpret_cast<const uint8_t *>(session.user_id), uid_len,
-                session.expected_pw_hash, PW_HASH_LEN,
-                session.challenge, CHALLENGE_LEN,
-                signing_key);
-    link.apply_signing_key(signing_key, AP_HAL::micros64()/10ULL);
-    link.send_text(MAV_SEVERITY_INFO, "AUTH_link: accepted user='%s' signing_key applied", session.user_id);
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: accepted user='%s' signing_key applied", session.user_id);
+    if (mavlink_signing_enabled()) {
+        // K = SHA256(user_id_utf8 + H + challenge) — GCS LoginDrone 와 동일 (userid 가변 길이)
+        const uint8_t uid_len = user_id_byte_len(session.user_id);
+        uint8_t signing_key[32] {};
+        sha256_32_3(reinterpret_cast<const uint8_t *>(session.user_id), uid_len,
+                    session.expected_pw_hash, PW_HASH_LEN,
+                    session.challenge, CHALLENGE_LEN,
+                    signing_key);
+        link.apply_signing_key(signing_key, AP_HAL::micros64()/10ULL);
+        link.send_text(MAV_SEVERITY_INFO, "AUTH_link: accepted user='%s' signing_key applied", session.user_id);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: accepted user='%s' signing_key applied", session.user_id);
+    } else {
+        // Session gate only; keep MAVLink unsigned both ways
+        link.clear_signing_key();
+        link.send_text(MAV_SEVERITY_INFO, "AUTH_link: accepted user='%s' unsigned session", session.user_id);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: accepted user='%s' unsigned session", session.user_id);
+    }
     send_exit_code(link, AUTH_EXIT_SUCCESS);
 
     return true;

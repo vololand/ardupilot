@@ -180,11 +180,24 @@ void GCS_MAVLINK::apply_signing_key(const uint8_t secret_key[32], uint64_t initi
     }
 }
 
+void GCS_MAVLINK::clear_signing_key(void)
+{
+    uint8_t zero_key[32] {};
+    apply_signing_key(zero_key, 0);
+}
+
 /*
   load signing key
  */
 void GCS_MAVLINK::load_signing_key(void)
 {
+    // AUTH_SIGNING=0: keep MAVLink unsigned regardless of stored key
+    if (!AP_GCS_Auth::get_singleton().mavlink_signing_enabled()) {
+        _channel_status.signing = nullptr;
+        _channel_status.signing_streams = nullptr;
+        return;
+    }
+
     struct SigningKey key;
     if (!signing_key_load(key)) {
         return;

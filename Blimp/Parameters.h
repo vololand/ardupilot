@@ -92,6 +92,7 @@ public:
         // AP_ADSB Library
         k_param_adsb,
         k_param_notify,
+        k_param_gcs_auth,
 
         //PID Controllers
         k_param_pid_vel_xy = 32,

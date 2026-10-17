@@ -4,6 +4,7 @@
 
 #if HAL_GCS_ENABLED
 
+#include <AP_Param/AP_Param.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 
 class GCS_MAVLINK;
@@ -22,7 +23,12 @@ enum AuthExitCode : uint8_t {
 
 class AP_GCS_Auth {
 public:
+    AP_GCS_Auth();
+
     static AP_GCS_Auth &get_singleton();
+
+    // true when AUTH_SIGNING=1 (login success applies MAVLink2 signing)
+    bool mavlink_signing_enabled() const { return _signing.get() != 0; }
 
     bool handle_message(GCS_MAVLINK &link, const mavlink_message_t &msg);
     bool is_message_allowed(mavlink_channel_t chan, uint32_t msgid) const;
@@ -30,6 +36,8 @@ public:
     bool is_channel_authenticated(mavlink_channel_t chan) const;
     bool is_usb_bypass_channel(mavlink_channel_t chan) const;
     void clear_channel_auth(mavlink_channel_t chan);
+
+    static const struct AP_Param::GroupInfo var_info[];
 
 private:
     static constexpr uint8_t MAX_USERS = 10;
@@ -61,6 +69,15 @@ private:
         INVALID_DB,
         NOT_FOUND,
     };
+
+    static AP_GCS_Auth *_singleton;
+
+    // @Param: SIGNING
+    // @DisplayName: AUTH MAVLink2 signing after login
+    // @Description: Controls whether a successful AUTH login enables MAVLink2 signing. 0: login opens the session gate only; MAVLink remains unsigned both ways. 1: derive signing key K on login and require/enable MAVLink2 signing.
+    // @Values: 0:Disabled,1:Enabled
+    // @User: Standard
+    AP_Int8 _signing;
 
     AuthSession _sessions[MAVLINK_COMM_NUM_BUFFERS];
 

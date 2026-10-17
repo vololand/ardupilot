@@ -221,6 +221,7 @@ public:
         k_param_steerController_old,    // unused
         k_param_barometer,
         k_param_notify,
+        k_param_gcs_auth,
         k_param_button,
         k_param_osd,
         k_param_optflow,

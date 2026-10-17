@@ -40,6 +40,7 @@
 #include <AP_Logger/AP_Logger.h>
 #include <AP_InertialSensor/AP_InertialSensor.h>
 #include <AP_Notify/AP_Notify.h>                    // Notify library
+#include <AP_GCS_Auth/AP_GCS_Auth.h>
 #include <AP_Param/AP_Param.h>
 #include <AP_RangeFinder/AP_RangeFinder.h>
 #include <AP_Relay/AP_Relay.h>                      // APM relay
@@ -391,6 +392,11 @@ protected:
     // notification object for LEDs, buzzers etc (parameter set to
     // false disables external leds)
     AP_Notify notify;
+
+#if HAL_GCS_ENABLED
+    // GCS custom AUTH (login / optional MAVLink2 signing)
+    AP_GCS_Auth gcs_auth;
+#endif
 
 #if AP_AHRS_ENABLED
     // Inertial Navigation EKF
