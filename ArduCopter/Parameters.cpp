@@ -684,6 +684,12 @@ const AP_Param::Info Copter::var_info[] = {
     // @Path: ../libraries/AP_Notify/AP_Notify.cpp
     GOBJECT(notify, "NTF_",  AP_Notify),
 
+#if HAL_GCS_ENABLED
+    // @Group: AUTH_
+    // @Path: ../libraries/AP_GCS_Auth/AP_GCS_Auth.cpp
+    GOBJECT(gcs_auth, "AUTH_", AP_GCS_Auth),
+#endif
+
 #if MODE_THROW_ENABLED
     // @Param: THROW_MOT_START
     // @DisplayName: Start motors before throwing is detected

@@ -301,6 +301,12 @@ const AP_Param::Info Tracker::var_info[] = {
     // @Path: ../libraries/AP_Notify/AP_Notify.cpp
     GOBJECT(notify, "NTF_",  AP_Notify),
 
+#if HAL_GCS_ENABLED
+    // @Group: AUTH_
+    // @Path: ../libraries/AP_GCS_Auth/AP_GCS_Auth.cpp
+    GOBJECT(gcs_auth, "AUTH_", AP_GCS_Auth),
+#endif
+
     // @Group: RC
     // @Path: ../libraries/RC_Channel/RC_Channels_VarInfo.h
     GOBJECT(rc_channels,     "RC", RC_Channels_Tracker),

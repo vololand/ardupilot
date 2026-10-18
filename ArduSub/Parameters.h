@@ -233,6 +233,7 @@ public:
         k_param_surftrak_depth,
 
         k_param_vehicle = 257, // vehicle common block of parameters
+        k_param_gcs_auth,
     };
 
     AP_Int16        format_version;

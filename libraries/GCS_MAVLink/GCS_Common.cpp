@@ -62,6 +62,7 @@
 #include <AP_RPM/AP_RPM.h>
 #include <AP_AIS/AP_AIS.h>
 #include <AP_Filesystem/AP_Filesystem.h>
+#include <AP_GCS_Auth/AP_GCS_Auth.h>
 #include <AP_Frsky_Telem/AP_Frsky_Telem.h>
 #include <RC_Channel/RC_Channel.h>
 #include <AP_VisualOdom/AP_VisualOdom.h>
@@ -1299,6 +1300,11 @@ ap_message GCS_MAVLINK::next_deferred_bucket_message_to_send(uint16_t now16_ms)
 // expected to be overridden, not this function.
 bool GCS_MAVLINK::do_try_send_message(const ap_message id)
 {
+    // Before AUTH, send no streamed telemetry, including HEARTBEAT.
+    // AUTH_CHALLENGE/AUTH_RESULT are sent directly by AP_GCS_Auth.
+    if (!AP_GCS_Auth::get_singleton().is_channel_authenticated(chan)) {
+        return true;
+    }
     const bool in_delay_callback = hal.scheduler->in_delay_callback();
     if (in_delay_callback && !should_send_message_in_delay_callback(id)) {
         return true;
@@ -2598,6 +2604,9 @@ void GCS::StatusTextQueue::prune(void)
  */
 void GCS_MAVLINK::service_statustext(void)
 {
+    if (!AP_GCS_Auth::get_singleton().is_channel_authenticated(chan)) {
+        return;
+    }
     GCS::StatusTextQueue &_statustext_queue = gcs().statustext_queue();
 
     const uint8_t chan_bit = (1U<<chan);
@@ -4175,6 +4184,11 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 
     case MAVLINK_MSG_ID_SETUP_SIGNING:
         handle_setup_signing(msg);
+        break;
+
+    case MAVLINK_MSG_ID_AUTH_REQUEST:
+    case MAVLINK_MSG_ID_AUTH_RESPONSE:
+        AP_GCS_Auth::get_singleton().handle_message(*this, msg);
         break;
 
     case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:
@@ -6779,6 +6793,10 @@ uint32_t GCS_MAVLINK::correct_offboard_timestamp_usec_to_ms(uint64_t offboard_us
 bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
                                 const mavlink_message_t &msg) const
 {
+    if (!AP_GCS_Auth::get_singleton().is_message_allowed(chan, msg.msgid)) {
+        return false;
+    }
+
     if (msg.sysid == mavlink_system.sysid) {
         // accept packets from our own components
         // (e.g. mavlink-connected companion computers)

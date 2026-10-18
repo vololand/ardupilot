@@ -133,6 +133,7 @@ public:
         k_param_logger = 253, // 253 - Logging Group
 
         k_param_vehicle = 257, // vehicle common block of parameters
+        k_param_gcs_auth,
     };
 
     AP_Int16 format_version;
