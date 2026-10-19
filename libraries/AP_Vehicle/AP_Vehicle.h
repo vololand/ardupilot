@@ -394,7 +394,7 @@ protected:
     AP_Notify notify;
 
 #if HAL_GCS_ENABLED
-    // GCS custom AUTH (login / optional MAVLink2 signing)
+    // GCS custom AUTH. MAVLink2 signing follows /APM/MAVLINK_V2_NO_SIGNATURE.
     AP_GCS_Auth gcs_auth;
 #endif
 

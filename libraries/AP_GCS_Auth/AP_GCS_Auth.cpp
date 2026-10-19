@@ -11,23 +11,11 @@ extern const AP_HAL::HAL &hal;
 
 AP_GCS_Auth *AP_GCS_Auth::_singleton;
 
-const AP_Param::GroupInfo AP_GCS_Auth::var_info[] = {
-    // @Param: SIGNING
-    // @DisplayName: AUTH MAVLink2 signing after login
-    // @Description: Controls whether a successful AUTH login enables MAVLink2 signing. 0: login opens the session gate only; MAVLink remains unsigned both ways. 1: derive signing key K on login and require/enable MAVLink2 signing.
-    // @Values: 0:Disabled,1:Enabled
-    // @User: Standard
-    AP_GROUPINFO("SIGNING", 1, AP_GCS_Auth, _signing, 0),
-
-    AP_GROUPEND
-};
-
 AP_GCS_Auth::AP_GCS_Auth()
 {
     if (_singleton == nullptr) {
         _singleton = this;
     }
-    AP_Param::setup_object_defaults(this, var_info);
 }
 
 struct mavlink_sha256_ctx {
@@ -48,6 +36,8 @@ constexpr uint32_t AUTH_TIMEOUT_MS = 10000;
 constexpr uint8_t AUTH_MAX_RETRIES = 3;
 constexpr const char *AUTH_DB_PRIMARY = "/APM/auth.dat";
 constexpr const char *USB_NO_AUTH_PATH = "/APM/USB_NO_AUTH";
+constexpr const char *AUTH_OFF_PATH = "/APM/AUTH_OFF";
+constexpr const char *NO_SIGNATURE_PATH = "/APM/MAVLINK_V2_NO_SIGNATURE";
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 constexpr const char *AUTH_DB_FALLBACK = "auth.dat";
 #else
@@ -60,28 +50,52 @@ struct UsbNoAuthCache {
 };
 
 UsbNoAuthCache usb_no_auth_cache;
+UsbNoAuthCache auth_off_cache;
+UsbNoAuthCache no_signature_cache;
 
 // force=true on AUTH_REQUEST. Otherwise reuse the last result.
-bool usb_no_auth_file_present(bool force)
+bool marker_file_present(UsbNoAuthCache &cache, const char *path, bool force,
+                         const char *present_msg, const char *absent_msg)
 {
-    if (!force && usb_no_auth_cache.valid) {
-        return usb_no_auth_cache.present;
+    if (!force && cache.valid) {
+        return cache.present;
     }
 
-    const int fd = AP::FS().open(USB_NO_AUTH_PATH, O_RDONLY, true);
+    const int fd = AP::FS().open(path, O_RDONLY, true);
     const bool present = fd >= 0;
     if (present) {
         AP::FS().close(fd);
     }
-    if ((usb_no_auth_cache.valid && usb_no_auth_cache.present != present) ||
-        (!usb_no_auth_cache.valid && present)) {
-        GCS_SEND_TEXT(present ? MAV_SEVERITY_INFO : MAV_SEVERITY_NOTICE,
-                      present ? "AUTH: /APM/USB_NO_AUTH present, USB auth bypass"
-                              : "AUTH: /APM/USB_NO_AUTH absent, USB auth required");
+    const bool announce = (cache.valid && cache.present != present) ||
+                          (!cache.valid && present);
+    cache.valid = true;
+    cache.present = present;
+    if (announce) {
+        GCS_SEND_TEXT(present ? MAV_SEVERITY_INFO : MAV_SEVERITY_NOTICE, "%s",
+                      present ? present_msg : absent_msg);
     }
-    usb_no_auth_cache.valid = true;
-    usb_no_auth_cache.present = present;
     return present;
+}
+
+bool usb_no_auth_file_present(bool force)
+{
+    return marker_file_present(usb_no_auth_cache, USB_NO_AUTH_PATH, force,
+                               "AUTH: /APM/USB_NO_AUTH present, USB auth bypass",
+                               "AUTH: /APM/USB_NO_AUTH absent, USB auth required");
+}
+
+bool auth_off_file_present(bool force)
+{
+    return marker_file_present(auth_off_cache, AUTH_OFF_PATH, force,
+                               "AUTH: /APM/AUTH_OFF present, login disabled",
+                               "AUTH: /APM/AUTH_OFF absent, login required");
+}
+
+bool no_signature_file_present(bool force)
+{
+    return marker_file_present(no_signature_cache, NO_SIGNATURE_PATH, force,
+                               "AUTH: /APM/MAVLINK_V2_NO_SIGNATURE present, signature disabled",
+                               "AUTH: /APM/MAVLINK_V2_NO_SIGNATURE absent, signature enabled");
 }
 
 bool is_usb_uart_channel(mavlink_channel_t chan)
@@ -287,12 +301,22 @@ bool AP_GCS_Auth::is_pre_auth_allowed_msg(uint32_t msgid)
            msgid == MAVLINK_MSG_ID_TIMESYNC;
 }
 
+bool AP_GCS_Auth::is_auth_disabled() const
+{
+    return auth_off_file_present(false);
+}
+
+bool AP_GCS_Auth::is_signature_disabled() const
+{
+    return no_signature_file_present(false);
+}
+
 bool AP_GCS_Auth::is_channel_authenticated(mavlink_channel_t chan) const
 {
     if (chan >= MAVLINK_COMM_NUM_BUFFERS) {
         return false;
     }
-    if (is_usb_no_auth_channel(chan)) {
+    if (is_auth_disabled() || is_usb_no_auth_channel(chan)) {
         return true;
     }
     return _sessions[chan].authenticated;
@@ -313,7 +337,7 @@ bool AP_GCS_Auth::is_message_allowed(mavlink_channel_t chan, uint32_t msgid) con
     if (chan >= MAVLINK_COMM_NUM_BUFFERS) {
         return false;
     }
-    if (is_usb_no_auth_channel(chan)) {
+    if (is_auth_disabled() || is_usb_no_auth_channel(chan)) {
         return true;
     }
     if (_sessions[chan].authenticated) {
@@ -324,7 +348,7 @@ bool AP_GCS_Auth::is_message_allowed(mavlink_channel_t chan, uint32_t msgid) con
 
 bool AP_GCS_Auth::allow_unsigned_message(const mavlink_status_t *status, uint32_t msgid) const
 {
-    if (is_pre_auth_allowed_msg(msgid)) {
+    if (is_auth_disabled() || is_signature_disabled() || is_pre_auth_allowed_msg(msgid)) {
         return true;
     }
     for (uint8_t i = 0; i < MAVLINK_COMM_NUM_BUFFERS; i++) {
@@ -332,10 +356,7 @@ bool AP_GCS_Auth::allow_unsigned_message(const mavlink_status_t *status, uint32_
             if (is_usb_no_auth_channel(mavlink_channel_t(MAVLINK_COMM_0 + i))) {
                 return true;
             }
-            if (_sessions[i].authenticated) {
-                // AUTH_SIGNING=0: plain MAVLink after login
-                return !mavlink_signing_enabled();
-            }
+            // Logged-in channels require a MAVLink2 signature unless the no-signature file is present.
             return false;
         }
     }
@@ -349,6 +370,20 @@ bool AP_GCS_Auth::is_usb_no_auth_channel(mavlink_channel_t chan) const
 
 bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_request_t &pkt)
 {
+    if (auth_off_file_present(true)) {
+        auto &session = _sessions[link.get_chan()];
+        session.pending = false;
+        session.authenticated = true;
+        link.send_text(MAV_SEVERITY_INFO, "AUTH_link: AUTH_OFF bypass (ch=%u)", unsigned(link.get_chan()));
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: AUTH_OFF bypass (ch=%u)", unsigned(link.get_chan()));
+
+        mavlink_auth_result_t result {};
+        result.result = MAV_AUTH_RESULT_ACCEPTED;
+        mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+        send_exit_code(link, AUTH_EXIT_SUCCESS);
+        return true;
+    }
+
     if (usb_no_auth_file_present(true) && is_usb_uart_channel(link.get_chan())) {
         auto &session = _sessions[link.get_chan()];
         session.pending = false;
@@ -379,12 +414,12 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
     auto &session = _sessions[link.get_chan()];
     if (pkt.request_type == MAV_AUTH_TYPE_LOGOUT) {
         clear_channel_auth(link.get_chan());
-        if (mavlink_signing_enabled()) {
+        if (no_signature_file_present(true)) {
+            link.clear_signing_key();
+        } else {
             uint8_t random_key[32] {};
             fill_random_bytes(random_key, sizeof(random_key));
             link.apply_signing_key(random_key, AP_HAL::micros64()/10ULL);
-        } else {
-            link.clear_signing_key();
         }
         link.send_text(MAV_SEVERITY_INFO, "AUTH_link: logout accepted (ch=%u)", unsigned(link.get_chan()));
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: logout accepted (ch=%u)", unsigned(link.get_chan()));
@@ -535,7 +570,11 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
     result.result = MAV_AUTH_RESULT_ACCEPTED;
     mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
 
-    if (mavlink_signing_enabled()) {
+    if (no_signature_file_present(true)) {
+        link.clear_signing_key();
+        link.send_text(MAV_SEVERITY_INFO, "AUTH_link: accepted user='%s' unsigned session", session.user_id);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: accepted user='%s' unsigned session", session.user_id);
+    } else {
         // K = SHA256(user_id_utf8 + H + challenge)
         const uint8_t uid_len = user_id_byte_len(session.user_id);
         uint8_t signing_key[32] {};
@@ -546,10 +585,6 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
         link.apply_signing_key(signing_key, AP_HAL::micros64()/10ULL);
         link.send_text(MAV_SEVERITY_INFO, "AUTH_link: accepted user='%s' signing_key applied", session.user_id);
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: accepted user='%s' signing_key applied", session.user_id);
-    } else {
-        link.clear_signing_key();
-        link.send_text(MAV_SEVERITY_INFO, "AUTH_link: accepted user='%s' unsigned session", session.user_id);
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: accepted user='%s' unsigned session", session.user_id);
     }
     send_exit_code(link, AUTH_EXIT_SUCCESS);
 

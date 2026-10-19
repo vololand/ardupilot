@@ -4,14 +4,13 @@
 
 #if HAL_GCS_ENABLED
 
-#include <AP_Param/AP_Param.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 
 class GCS_MAVLINK;
 
 // STATUSTEXT progress/result codes: "AUTH_EXIT_<NAME>=N"
 enum AuthExitCode : uint8_t {
-    AUTH_EXIT_SUCCESS       = 0,  // login, logout, or USB_NO_AUTH bypass
+    AUTH_EXIT_SUCCESS       = 0,  // login, logout, AUTH_OFF, or USB_NO_AUTH bypass
     AUTH_EXIT_INVALID_ARGS  = 1,  // bad target, request, user_id, timestamp, or timeout
     AUTH_EXIT_FILE_ERROR    = 2,  // auth.dat open failed
     AUTH_EXIT_INVALID_DB    = 3,  // auth.dat record size mismatch
@@ -27,18 +26,17 @@ public:
 
     static AP_GCS_Auth &get_singleton();
 
-    // true when AUTH_SIGNING=1. Default 0 keeps post-login MAVLink unsigned.
-    bool mavlink_signing_enabled() const { return _signing.get() != 0; }
-
     bool handle_message(GCS_MAVLINK &link, const mavlink_message_t &msg);
     bool is_message_allowed(mavlink_channel_t chan, uint32_t msgid) const;
     bool allow_unsigned_message(const mavlink_status_t *status, uint32_t msgid) const;
     bool is_channel_authenticated(mavlink_channel_t chan) const;
+    // True when /APM/AUTH_OFF exists. Login is skipped on every MAVLink channel.
+    bool is_auth_disabled() const;
+    // True when /APM/MAVLINK_V2_NO_SIGNATURE exists. Login still applies, but MAVLink2 signatures are omitted.
+    bool is_signature_disabled() const;
     // True when /APM/USB_NO_AUTH exists and chan is a USB UART.
     bool is_usb_no_auth_channel(mavlink_channel_t chan) const;
     void clear_channel_auth(mavlink_channel_t chan);
-
-    static const struct AP_Param::GroupInfo var_info[];
 
 private:
     static constexpr uint8_t MAX_USERS = 10;
@@ -72,13 +70,6 @@ private:
     };
 
     static AP_GCS_Auth *_singleton;
-
-    // @Param: SIGNING
-    // @DisplayName: AUTH MAVLink2 signing after login
-    // @Description: Controls whether a successful AUTH login enables MAVLink2 signing. 0: login opens the session gate only; MAVLink remains unsigned both ways. 1: derive signing key K on login and require/enable MAVLink2 signing.
-    // @Values: 0:Disabled,1:Enabled
-    // @User: Standard
-    AP_Int8 _signing;
 
     AuthSession _sessions[MAVLINK_COMM_NUM_BUFFERS];
 

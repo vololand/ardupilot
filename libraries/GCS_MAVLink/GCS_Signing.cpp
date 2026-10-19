@@ -31,8 +31,11 @@ void refresh_outgoing_signing_flag(mavlink_channel_t chan, mavlink_status_t *sta
         return;
     }
 
-    // USB skips outgoing signing only while /APM/USB_NO_AUTH bypass is active.
-    if (AP_GCS_Auth::get_singleton().is_usb_no_auth_channel(chan)) {
+    // Skip outgoing signing while login is disabled, a USB bypass is active,
+    // or /APM/MAVLINK_V2_NO_SIGNATURE is present.
+    if (AP_GCS_Auth::get_singleton().is_auth_disabled() ||
+        AP_GCS_Auth::get_singleton().is_signature_disabled() ||
+        AP_GCS_Auth::get_singleton().is_usb_no_auth_channel(chan)) {
         status->signing->flags &= ~MAVLINK_SIGNING_FLAG_SIGN_OUTGOING;
     } else {
         status->signing->flags |= MAVLINK_SIGNING_FLAG_SIGN_OUTGOING;
@@ -172,8 +175,8 @@ void GCS_MAVLINK::clear_signing_key(void)
  */
 void GCS_MAVLINK::load_signing_key(void)
 {
-    // AUTH_SIGNING=0: keep MAVLink unsigned regardless of a stored key
-    if (!AP_GCS_Auth::get_singleton().mavlink_signing_enabled()) {
+    // /APM/MAVLINK_V2_NO_SIGNATURE keeps MAVLink unsigned regardless of a stored key.
+    if (AP_GCS_Auth::get_singleton().is_signature_disabled()) {
         _channel_status.signing = nullptr;
         _channel_status.signing_streams = nullptr;
         return;

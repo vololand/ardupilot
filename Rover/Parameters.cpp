@@ -368,12 +368,6 @@ const AP_Param::Info Rover::var_info[] = {
     // @Path: ../libraries/AP_Notify/AP_Notify.cpp
     GOBJECT(notify, "NTF_",  AP_Notify),
 
-#if HAL_GCS_ENABLED
-    // @Group: AUTH_
-    // @Path: ../libraries/AP_GCS_Auth/AP_GCS_Auth.cpp
-    GOBJECT(gcs_auth, "AUTH_", AP_GCS_Auth),
-#endif
-
 #if HAL_BUTTON_ENABLED
     // @Group: BTN_
     // @Path: ../libraries/AP_Button/AP_Button.cpp
