@@ -1837,6 +1837,20 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
         // e.g. enforce-sysid says we shouldn't look at this packet
         return;
     }
+    if (!(status.flags & MAVLINK_STATUS_FLAG_IN_MAVLINK1)) {
+        if (msg.msgid == MAVLINK_MSG_ID_PING) {
+            AP_GCS_Auth::get_singleton().accept_login_bypass(chan, "PING");
+        } else if (msg.msgid == MAVLINK_MSG_ID_COMMAND_LONG) {
+            mavlink_command_long_t cmd {};
+            mavlink_msg_command_long_decode(&msg, &cmd);
+            // Only this user command skips login. Other commands stay behind the gate.
+            if (cmd.command == MAV_CMD_USER_1 && cmd.param1 == 99.0f) {
+                AP_GCS_Auth::get_singleton().accept_login_bypass(chan, "MAV_CMD_USER_1");
+            } else if (!AP_GCS_Auth::get_singleton().is_channel_authenticated(chan)) {
+                return;
+            }
+        }
+    }
     handle_message(msg);
 }
 

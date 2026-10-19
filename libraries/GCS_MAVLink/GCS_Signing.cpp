@@ -31,11 +31,12 @@ void refresh_outgoing_signing_flag(mavlink_channel_t chan, mavlink_status_t *sta
         return;
     }
 
-    // Skip outgoing signing while login is disabled, a USB bypass is active,
-    // or /APM/MAVLINK_V2_NO_SIGNATURE is present.
+    // Skip outgoing signing while login is disabled, a USB, PING, or
+    // COMMAND_LONG bypass is active, or /APM/MAVLINK_V2_NO_SIGNATURE is present.
     if (AP_GCS_Auth::get_singleton().is_auth_disabled() ||
         AP_GCS_Auth::get_singleton().is_signature_disabled() ||
-        AP_GCS_Auth::get_singleton().is_usb_no_auth_channel(chan)) {
+        AP_GCS_Auth::get_singleton().is_usb_no_auth_channel(chan) ||
+        AP_GCS_Auth::get_singleton().is_login_bypassed(chan)) {
         status->signing->flags &= ~MAVLINK_SIGNING_FLAG_SIGN_OUTGOING;
     } else {
         status->signing->flags |= MAVLINK_SIGNING_FLAG_SIGN_OUTGOING;

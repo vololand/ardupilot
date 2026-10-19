@@ -298,7 +298,9 @@ bool AP_GCS_Auth::is_pre_auth_allowed_msg(uint32_t msgid)
 {
     return is_login_msg(msgid) ||
            msgid == MAVLINK_MSG_ID_HEARTBEAT ||
-           msgid == MAVLINK_MSG_ID_TIMESYNC;
+           msgid == MAVLINK_MSG_ID_TIMESYNC ||
+           msgid == MAVLINK_MSG_ID_PING ||
+           msgid == MAVLINK_MSG_ID_COMMAND_LONG;
 }
 
 bool AP_GCS_Auth::is_auth_disabled() const
@@ -329,7 +331,36 @@ void AP_GCS_Auth::clear_channel_auth(mavlink_channel_t chan)
     }
     _sessions[chan].authenticated = false;
     _sessions[chan].pending = false;
+    _sessions[chan].opened_without_login = false;
     _sessions[chan].user_known = false;
+}
+
+void AP_GCS_Auth::accept_login_bypass(mavlink_channel_t chan, const char *source)
+{
+    if (chan >= MAVLINK_COMM_NUM_BUFFERS) {
+        return;
+    }
+    auto &session = _sessions[chan];
+    // A password login owns the channel, including its signing key.
+    if (session.authenticated && !session.opened_without_login) {
+        return;
+    }
+    const bool first = !session.authenticated;
+    session.pending = false;
+    session.authenticated = true;
+    session.opened_without_login = true;
+    if (first) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH: %s accepted, login skipped (ch=%u)",
+                      source != nullptr ? source : "message",
+                      unsigned(chan));
+    }
+}
+
+bool AP_GCS_Auth::is_login_bypassed(mavlink_channel_t chan) const
+{
+    return chan < MAVLINK_COMM_NUM_BUFFERS &&
+           _sessions[chan].authenticated &&
+           _sessions[chan].opened_without_login;
 }
 
 bool AP_GCS_Auth::is_message_allowed(mavlink_channel_t chan, uint32_t msgid) const
@@ -353,7 +384,8 @@ bool AP_GCS_Auth::allow_unsigned_message(const mavlink_status_t *status, uint32_
     }
     for (uint8_t i = 0; i < MAVLINK_COMM_NUM_BUFFERS; i++) {
         if (status == mavlink_get_channel_status(mavlink_channel_t(MAVLINK_COMM_0 + i))) {
-            if (is_usb_no_auth_channel(mavlink_channel_t(MAVLINK_COMM_0 + i))) {
+            if (is_usb_no_auth_channel(mavlink_channel_t(MAVLINK_COMM_0 + i)) ||
+                is_login_bypassed(mavlink_channel_t(MAVLINK_COMM_0 + i))) {
                 return true;
             }
             // Logged-in channels require a MAVLink2 signature unless the no-signature file is present.
@@ -479,6 +511,7 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
 
     session.pending = true;
     session.authenticated = false;
+    session.opened_without_login = false;
     session.user_known = user_found;
     session.timestamp_ms = AP_HAL::millis();
     session.retries_left = AUTH_MAX_RETRIES;
@@ -567,6 +600,7 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
 
     session.pending = false;
     session.authenticated = true;
+    session.opened_without_login = false;
     result.result = MAV_AUTH_RESULT_ACCEPTED;
     mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
 

