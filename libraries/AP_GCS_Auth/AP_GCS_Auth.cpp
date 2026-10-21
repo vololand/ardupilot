@@ -335,6 +335,38 @@ void AP_GCS_Auth::clear_channel_auth(mavlink_channel_t chan)
     _sessions[chan].user_known = false;
 }
 
+void AP_GCS_Auth::announce_link_mode(mavlink_channel_t chan)
+{
+    if (chan >= MAVLINK_COMM_NUM_BUFFERS) {
+        return;
+    }
+    const uint32_t now = AP_HAL::millis();
+    const uint32_t last = _last_gcs_contact_ms[chan];
+    const bool new_session = (last == 0) || (now - last > 5000);
+    _last_gcs_contact_ms[chan] = now;
+    if (!new_session) {
+        return;
+    }
+
+    // AUTH_OFF and USB_NO_AUTH behave as a normal link on this channel.
+    const bool user_auth = !is_auth_disabled() && !is_usb_no_auth_channel(chan);
+    char text[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN] {};
+    hal.util->snprintf(text, sizeof(text), "AUTH_MODE=%s", user_auth ? "USER" : "NORMAL");
+
+    // Send unsigned. The GCS does not yet have the session signing key.
+    mavlink_status_t *status = mavlink_get_channel_status(chan);
+    uint8_t saved_flags = 0;
+    const bool had_signing = status != nullptr && status->signing != nullptr;
+    if (had_signing) {
+        saved_flags = status->signing->flags;
+        status->signing->flags &= ~MAVLINK_SIGNING_FLAG_SIGN_OUTGOING;
+    }
+    mavlink_msg_statustext_send(chan, MAV_SEVERITY_INFO, text, 0, 0);
+    if (had_signing) {
+        status->signing->flags = saved_flags;
+    }
+}
+
 void AP_GCS_Auth::accept_login_bypass(mavlink_channel_t chan, const char *source)
 {
     if (chan >= MAVLINK_COMM_NUM_BUFFERS) {

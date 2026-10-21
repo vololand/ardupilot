@@ -38,6 +38,8 @@ public:
     bool is_usb_no_auth_channel(mavlink_channel_t chan) const;
     // MAVLink2 PING, or COMMAND_LONG MAV_CMD_USER_1 with param1 99, opens this channel without the password handshake.
     void accept_login_bypass(mavlink_channel_t chan, const char *source);
+    // On a new GCS link, tell the GCS whether this channel requires user login.
+    void announce_link_mode(mavlink_channel_t chan);
     bool is_login_bypassed(mavlink_channel_t chan) const;
     void clear_channel_auth(mavlink_channel_t chan);
 
@@ -76,6 +78,8 @@ private:
     static AP_GCS_Auth *_singleton;
 
     AuthSession _sessions[MAVLINK_COMM_NUM_BUFFERS];
+    // Last time a GCS heartbeat was seen on this channel. Used to announce mode once per link.
+    uint32_t _last_gcs_contact_ms[MAVLINK_COMM_NUM_BUFFERS] {};
 
     bool handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_request_t &pkt);
     bool handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_response_t &pkt);
