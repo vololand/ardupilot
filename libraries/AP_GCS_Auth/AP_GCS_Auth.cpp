@@ -151,6 +151,45 @@ uint8_t user_id_byte_len(const char user_id[USER_ID_LEN])
 }
 } // namespace
 
+// The GCS does not have the session key yet. Handshake packets must be
+// MAVLink2 and unsigned, even when a previous signing key is loaded or the
+// port is still in MAVLink1 output mode (msgid > 255 cannot be sent as v1).
+struct AuthLinkSend {
+    explicit AuthLinkSend(mavlink_channel_t chan)
+        : status(mavlink_get_channel_status(chan)),
+          saved_flags(0),
+          saved_signing(0),
+          have_signing(false)
+    {
+        if (status == nullptr) {
+            return;
+        }
+        saved_flags = status->flags;
+        status->flags &= ~MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
+        if (status->signing != nullptr) {
+            saved_signing = status->signing->flags;
+            have_signing = true;
+            status->signing->flags &= ~MAVLINK_SIGNING_FLAG_SIGN_OUTGOING;
+        }
+    }
+
+    ~AuthLinkSend()
+    {
+        if (status == nullptr) {
+            return;
+        }
+        status->flags = saved_flags;
+        if (have_signing && status->signing != nullptr) {
+            status->signing->flags = saved_signing;
+        }
+    }
+
+    mavlink_status_t *status;
+    uint8_t saved_flags;
+    uint8_t saved_signing;
+    bool have_signing;
+};
+
 AP_GCS_Auth &AP_GCS_Auth::get_singleton()
 {
     if (_singleton == nullptr) {
@@ -235,7 +274,10 @@ void AP_GCS_Auth::send_exit_code(GCS_MAVLINK &link, AuthExitCode code)
     hal.util->snprintf(text, sizeof(text), "%s=%u", name, unsigned(code));
     const MAV_SEVERITY sev = (code == AUTH_EXIT_SUCCESS) ? MAV_SEVERITY_INFO : MAV_SEVERITY_WARNING;
     // Direct send: the pre-auth stream suppresses queued STATUSTEXT.
-    mavlink_msg_statustext_send(link.get_chan(), sev, text, 0, 0);
+    {
+        AuthLinkSend unsigned_send(link.get_chan());
+        mavlink_msg_statustext_send(link.get_chan(), sev, text, 0, 0);
+    }
 }
 
 AP_GCS_Auth::DbLookupStatus AP_GCS_Auth::find_user_record(GCS_MAVLINK &link, const char user_id[USER_ID_LEN], AuthRecord &record) const
@@ -353,17 +395,10 @@ void AP_GCS_Auth::announce_link_mode(mavlink_channel_t chan)
     char text[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN] {};
     hal.util->snprintf(text, sizeof(text), "AUTH_MODE=%s", user_auth ? "USER" : "NORMAL");
 
-    // Send unsigned. The GCS does not yet have the session signing key.
-    mavlink_status_t *status = mavlink_get_channel_status(chan);
-    uint8_t saved_flags = 0;
-    const bool had_signing = status != nullptr && status->signing != nullptr;
-    if (had_signing) {
-        saved_flags = status->signing->flags;
-        status->signing->flags &= ~MAVLINK_SIGNING_FLAG_SIGN_OUTGOING;
-    }
-    mavlink_msg_statustext_send(chan, MAV_SEVERITY_INFO, text, 0, 0);
-    if (had_signing) {
-        status->signing->flags = saved_flags;
+    // Send unsigned MAVLink2. The GCS does not yet have the session signing key.
+    {
+        AuthLinkSend unsigned_send(chan);
+        mavlink_msg_statustext_send(chan, MAV_SEVERITY_INFO, text, 0, 0);
     }
 }
 
@@ -443,7 +478,10 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
 
         mavlink_auth_result_t result {};
         result.result = MAV_AUTH_RESULT_ACCEPTED;
+        {
+        AuthLinkSend unsigned_send(link.get_chan());
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
         send_exit_code(link, AUTH_EXIT_SUCCESS);
         return true;
     }
@@ -457,7 +495,10 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
 
         mavlink_auth_result_t result {};
         result.result = MAV_AUTH_RESULT_ACCEPTED;
+        {
+        AuthLinkSend unsigned_send(link.get_chan());
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
         send_exit_code(link, AUTH_EXIT_SUCCESS);
         return true;
     }
@@ -490,7 +531,10 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
 
         mavlink_auth_result_t result {};
         result.result = MAV_AUTH_RESULT_ACCEPTED;
+        {
+        AuthLinkSend unsigned_send(link.get_chan());
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
         send_exit_code(link, AUTH_EXIT_SUCCESS);
         return true;
     }
@@ -500,7 +544,10 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "AUTH_GCS: unsupported request type=%u", unsigned(pkt.request_type));
         mavlink_auth_result_t result {};
         result.result = MAV_AUTH_RESULT_FAILED;
+        {
+        AuthLinkSend unsigned_send(link.get_chan());
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
         send_exit_code(link, AUTH_EXIT_INVALID_ARGS);
         return true;
     }
@@ -510,7 +557,10 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
     if (user_id[0] == 0) {
         mavlink_auth_result_t result {};
         result.result = MAV_AUTH_RESULT_FAILED;
+        {
+        AuthLinkSend unsigned_send(link.get_chan());
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
         send_exit_code(link, AUTH_EXIT_INVALID_ARGS);
         return true;
     }
@@ -563,7 +613,10 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
         fill_random_bytes(challenge.user_salt, USER_SALT_LEN);
     }
     challenge.timestamp = session.timestamp_ms;
-    mavlink_msg_auth_challenge_send_struct(link.get_chan(), &challenge);
+    {
+        AuthLinkSend unsigned_send(link.get_chan());
+        mavlink_msg_auth_challenge_send_struct(link.get_chan(), &challenge);
+    }
     link.send_text(MAV_SEVERITY_INFO, "AUTH_link: challenge sent (ch=%u ts=%lu)",
                    unsigned(link.get_chan()),
                    static_cast<unsigned long>(challenge.timestamp));
@@ -596,7 +649,10 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
         session.pending = false;
         session.authenticated = false;
         session.user_known = false;
+        {
+        AuthLinkSend unsigned_send(link.get_chan());
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
         return true;
     }
 
@@ -618,7 +674,10 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
                        unsigned(session.retries_left));
         send_exit_code(link, session.user_known ? AUTH_EXIT_PW_MISMATCH : AUTH_EXIT_NOT_FOUND);
         session.authenticated = false;
+        {
+        AuthLinkSend unsigned_send(link.get_chan());
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
         return true;
     }
 
@@ -626,7 +685,10 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
         send_exit_code(link, AUTH_EXIT_NOT_FOUND);
         session.pending = false;
         session.authenticated = false;
+        {
+        AuthLinkSend unsigned_send(link.get_chan());
         mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
         return true;
     }
 
@@ -634,7 +696,10 @@ bool AP_GCS_Auth::handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_res
     session.authenticated = true;
     session.opened_without_login = false;
     result.result = MAV_AUTH_RESULT_ACCEPTED;
-    mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    {
+        AuthLinkSend unsigned_send(link.get_chan());
+        mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
 
     if (no_signature_file_present(true)) {
         link.clear_signing_key();
