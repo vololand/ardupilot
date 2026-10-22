@@ -1512,6 +1512,8 @@ void GCS_MAVLINK_InProgress::check_tasks()
 
 void GCS_MAVLINK::update_send()
 {
+    // GCS does not send HEARTBEAT before login. Advertise AUTH_MODE until it speaks.
+    AP_GCS_Auth::get_singleton().poll_auth_mode(chan);
 #if HAL_LOGGING_ENABLED
     if (!hal.scheduler->in_delay_callback()) {
         // AP_Logger will not send log data if we are armed.
@@ -1804,6 +1806,7 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
     // make it possible to use the CLI over the radio
     if (msg.msgid != MAVLINK_MSG_ID_RADIO && msg.msgid != MAVLINK_MSG_ID_RADIO_STATUS) {
         mavlink_active |= (1U<<(chan-MAVLINK_COMM_0));
+        AP_GCS_Auth::get_singleton().note_gcs_traffic(chan);
     }
     const auto mavlink_protocol = uartstate->get_protocol();
     if (!(status.flags & MAVLINK_STATUS_FLAG_IN_MAVLINK1) &&

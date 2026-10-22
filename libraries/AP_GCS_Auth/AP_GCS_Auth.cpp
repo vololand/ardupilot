@@ -273,6 +273,12 @@ void AP_GCS_Auth::send_exit_code(GCS_MAVLINK &link, AuthExitCode code)
     char text[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN] {};
     hal.util->snprintf(text, sizeof(text), "%s=%u", name, unsigned(code));
     const MAV_SEVERITY sev = (code == AUTH_EXIT_SUCCESS) ? MAV_SEVERITY_INFO : MAV_SEVERITY_WARNING;
+    // Once the channel is open, queue this after the progress lines so
+    // SUCCESS is not delivered before "login request" and "challenge sent".
+    if (get_singleton().is_channel_authenticated(link.get_chan())) {
+        link.send_text(sev, "%s", text);
+        return;
+    }
     // Direct send: the pre-auth stream suppresses queued STATUSTEXT.
     {
         AuthLinkSend unsigned_send(link.get_chan());
@@ -377,6 +383,24 @@ void AP_GCS_Auth::clear_channel_auth(mavlink_channel_t chan)
     _sessions[chan].user_known = false;
 }
 
+void AP_GCS_Auth::send_auth_mode_now(mavlink_channel_t chan)
+{
+    if (chan >= MAVLINK_COMM_NUM_BUFFERS) {
+        return;
+    }
+    // AUTH_OFF and USB_NO_AUTH behave as a normal link on this channel.
+    const bool user_auth = !is_auth_disabled() && !is_usb_no_auth_channel(chan);
+    char text[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN] {};
+    hal.util->snprintf(text, sizeof(text), "AUTH_MODE=%s", user_auth ? "USER" : "NORMAL");
+
+    // Send unsigned MAVLink2. The GCS does not yet have the session signing key.
+    {
+        AuthLinkSend unsigned_send(chan);
+        mavlink_msg_statustext_send(chan, MAV_SEVERITY_INFO, text, 0, 0);
+    }
+    _auth_mode_tx_ms[chan] = AP_HAL::millis();
+}
+
 void AP_GCS_Auth::announce_link_mode(mavlink_channel_t chan)
 {
     if (chan >= MAVLINK_COMM_NUM_BUFFERS) {
@@ -389,17 +413,27 @@ void AP_GCS_Auth::announce_link_mode(mavlink_channel_t chan)
     if (!new_session) {
         return;
     }
+    send_auth_mode_now(chan);
+}
 
-    // AUTH_OFF and USB_NO_AUTH behave as a normal link on this channel.
-    const bool user_auth = !is_auth_disabled() && !is_usb_no_auth_channel(chan);
-    char text[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN] {};
-    hal.util->snprintf(text, sizeof(text), "AUTH_MODE=%s", user_auth ? "USER" : "NORMAL");
-
-    // Send unsigned MAVLink2. The GCS does not yet have the session signing key.
-    {
-        AuthLinkSend unsigned_send(chan);
-        mavlink_msg_statustext_send(chan, MAV_SEVERITY_INFO, text, 0, 0);
+void AP_GCS_Auth::poll_auth_mode(mavlink_channel_t chan)
+{
+    if (chan >= MAVLINK_COMM_NUM_BUFFERS || _gcs_traffic_seen[chan]) {
+        return;
     }
+    const uint32_t now = AP_HAL::millis();
+    if (_auth_mode_tx_ms[chan] != 0 && now - _auth_mode_tx_ms[chan] < 1000) {
+        return;
+    }
+    send_auth_mode_now(chan);
+}
+
+void AP_GCS_Auth::note_gcs_traffic(mavlink_channel_t chan)
+{
+    if (chan >= MAVLINK_COMM_NUM_BUFFERS) {
+        return;
+    }
+    _gcs_traffic_seen[chan] = true;
 }
 
 void AP_GCS_Auth::accept_login_bypass(mavlink_channel_t chan, const char *source)
@@ -469,6 +503,9 @@ bool AP_GCS_Auth::is_usb_no_auth_channel(mavlink_channel_t chan) const
 
 bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_request_t &pkt)
 {
+    // First reply on this link, even when the GCS has not sent HEARTBEAT.
+    send_auth_mode_now(link.get_chan());
+
     if (auth_off_file_present(true)) {
         auto &session = _sessions[link.get_chan()];
         session.pending = false;

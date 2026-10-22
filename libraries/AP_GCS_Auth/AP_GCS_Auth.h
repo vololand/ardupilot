@@ -40,6 +40,9 @@ public:
     void accept_login_bypass(mavlink_channel_t chan, const char *source);
     // On a new GCS link, tell the GCS whether this channel requires user login.
     void announce_link_mode(mavlink_channel_t chan);
+    // Repeat AUTH_MODE until the GCS sends any packet. No GCS HEARTBEAT is required.
+    void poll_auth_mode(mavlink_channel_t chan);
+    void note_gcs_traffic(mavlink_channel_t chan);
     bool is_login_bypassed(mavlink_channel_t chan) const;
     void clear_channel_auth(mavlink_channel_t chan);
 
@@ -80,6 +83,10 @@ private:
     AuthSession _sessions[MAVLINK_COMM_NUM_BUFFERS];
     // Last time a GCS heartbeat was seen on this channel. Used to announce mode once per link.
     uint32_t _last_gcs_contact_ms[MAVLINK_COMM_NUM_BUFFERS] {};
+    uint32_t _auth_mode_tx_ms[MAVLINK_COMM_NUM_BUFFERS] {};
+    bool _gcs_traffic_seen[MAVLINK_COMM_NUM_BUFFERS] {};
+
+    void send_auth_mode_now(mavlink_channel_t chan);
 
     bool handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_request_t &pkt);
     bool handle_auth_response(GCS_MAVLINK &link, const mavlink_auth_response_t &pkt);
