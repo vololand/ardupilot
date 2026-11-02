@@ -477,13 +477,117 @@ def cppcheck_command_markdown(compile_db_path, stdout_path, xml_path):
     return "\n".join(lines)
 
 
-def compile_db_file_count(report_dir):
-    """검사 목록에 들어 있는 소스 파일 수를 센다."""
+def compile_db_composition(report_dir):
+    """검사 목록을 ArduPlane, ArduCopter, libraries, 그 외 개수로 센다."""
     compile_db_path = report_file(report_dir, "compile_commands-firstparty.json")
     if not os.path.isfile(compile_db_path):
         raise FileNotFoundError("검사 목록이 없습니다: %s" % compile_db_path)
     else:
-        return len(load_compile_commands(compile_db_path))
+        commands = load_compile_commands(compile_db_path)
+    counts = {"ArduPlane/": 0, "ArduCopter/": 0, "libraries/": 0, "other": 0}
+    for entry in commands:
+        try:
+            rel = relative_path(command_file_path(entry))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("검사 목록의 소스 경로를 읽지 못했습니다") from exc
+        else:
+            if rel.startswith("ArduPlane/"):
+                counts["ArduPlane/"] += 1
+            elif rel.startswith("ArduCopter/"):
+                counts["ArduCopter/"] += 1
+            elif rel.startswith("libraries/"):
+                counts["libraries/"] += 1
+            else:
+                counts["other"] += 1
+    return counts
+
+
+def scope_description(counts):
+    """실제 파일 수에 맞는 대상 문장, 구성 문장, 남긴 경로를 만든다."""
+    plane = counts["ArduPlane/"]
+    copter = counts["ArduCopter/"]
+    libraries = counts["libraries/"]
+    other = counts["other"]
+    total = plane + copter + libraries + other
+    if plane > 0 and copter > 0:
+        vehicle_name = "ArduPlane, ArduCopter"
+    elif plane > 0 and copter == 0:
+        vehicle_name = "ArduPlane"
+    elif plane == 0 and copter > 0:
+        vehicle_name = "ArduCopter"
+    else:
+        vehicle_name = ""
+    if vehicle_name:
+        target = "대상은 NarinFC-H7용 %s 펌웨어에 컴파일된 직접 작성 코드 %d개입니다." % (vehicle_name, total)
+    else:
+        target = "대상은 NarinFC-H7 펌웨어에 컴파일된 직접 작성 코드 %d개입니다." % total
+    parts = []
+    if plane > 0:
+        parts.append("`ArduPlane/` %d개" % plane)
+    else:
+        pass
+    if copter > 0:
+        parts.append("`ArduCopter/` %d개" % copter)
+    else:
+        pass
+    if libraries > 0:
+        parts.append("`libraries/` %d개" % libraries)
+    else:
+        pass
+    if other > 0:
+        parts.append("그 외 %d개" % other)
+    else:
+        pass
+    if len(parts) == 0:
+        composition = "구성에 센 파일이 없습니다."
+    else:
+        composition = "구성은 %s입니다." % ", ".join(parts)
+    kept = []
+    for name in ("ArduPlane/", "ArduCopter/", "libraries/"):
+        if counts[name] > 0:
+            kept.append("`%s`" % name)
+        else:
+            continue
+    if len(kept) == 0:
+        kept_text = "직접 작성 코드"
+    else:
+        kept_text = ", ".join(kept)
+    return target, composition, kept_text, total
+
+
+def vehicle_warning_note(counts, plane_hits, copter_hits):
+    """검사 목록에 있는 기체 폴더의 Cppcheck 경고 수를 문장으로 만든다."""
+    noted = []
+    if counts["ArduPlane/"] > 0:
+        noted.append(("`ArduPlane/`", plane_hits))
+    else:
+        pass
+    if counts["ArduCopter/"] > 0:
+        noted.append(("`ArduCopter/`", copter_hits))
+    else:
+        pass
+    if len(noted) == 0:
+        return False, ""
+    else:
+        zero_labels = []
+        nonzero_parts = []
+        for label, hits in noted:
+            if hits == 0:
+                zero_labels.append(label)
+            else:
+                nonzero_parts.append("%s Cppcheck 경고 %d건" % (label, hits))
+        all_zero = len(nonzero_parts) == 0
+        if all_zero:
+            text = "%s에 Cppcheck 경고가 0건인 이유 중 하나입니다." % ", ".join(zero_labels)
+        else:
+            pieces = []
+            if len(zero_labels) > 0:
+                pieces.append("%s에 Cppcheck 경고가 0건입니다." % ", ".join(zero_labels))
+            else:
+                pass
+            pieces.append("%s입니다." % ", ".join(nonzero_parts))
+            text = " ".join(pieces)
+        return all_zero, text
 
 
 def write_findings_md(rows, report_dir):
@@ -505,7 +609,8 @@ def write_findings_md(rows, report_dir):
     counts = Counter((row["source"], row["category_no"]) for row in primary)
     id_counts = Counter((row["category_no"], row["cppcheck_id"]) for row in cpp_primary)
     severity_counts = Counter(row["severity"] for row in cpp_primary)
-    file_count = compile_db_file_count(report_dir)
+    composition = compile_db_composition(report_dir)
+    target_sentence, composition_sentence, kept_prefixes, file_count = scope_description(composition)
     compile_db_path = report_file(report_dir, "compile_commands-firstparty.json")
     stdout_path = report_file(report_dir, "cppcheck-stdout.txt")
     xml_path = report_file(report_dir, "cppcheck-raw.xml")
@@ -517,7 +622,8 @@ def write_findings_md(rows, report_dir):
     lines = []
     lines.append("# NarinFC-H7 보안약점 분석 결과")
     lines.append("")
-    lines.append("대상은 NarinFC-H7용 ArduPlane, ArduCopter 펌웨어에 컴파일된 직접 작성 코드 %d개입니다." % file_count)
+    lines.append(target_sentence)
+    lines.append(composition_sentence)
     lines.append("부트로더, `build/` 생성물, lwIP, DroneCAN은 이 목록에 넣지 않았습니다.")
     lines.append("")
     lines.append("## 사용한 명령")
@@ -550,7 +656,7 @@ def write_findings_md(rows, report_dir):
     lines.append("| `--quiet` | 진행 문구 숨김 |")
     lines.append("| `--xml --xml-version=2` | 결과 형식 XML 2 |")
     lines.append("")
-    lines.append("`--project`에 넣은 목록은 `build/NarinFC-H7/compile_commands.json`에서 `ArduPlane/`, `ArduCopter/`, `libraries/`만 남긴 것입니다. 같은 파일이 이 폴더의 `compile_commands-firstparty.json`입니다.")
+    lines.append("`--project`에 넣은 목록은 `build/NarinFC-H7/compile_commands.json`에서 %s만 남긴 것입니다. 같은 파일이 이 폴더의 `compile_commands-firstparty.json`입니다." % kept_prefixes)
     lines.append("")
     lines.append("## 원본 파일")
     lines.append("")
@@ -582,11 +688,14 @@ def write_findings_md(rows, report_dir):
         tool_note = "error %d건은 펌웨어 결함이 아니라 분석기 한계입니다. `mavlink_types.h`의 `MAVPACKED` 구문, CMSIS `#error`입니다. 이 헤더를 포함하는 파일은 분석이 얕을 수 있습니다." % severity_counts.get("error", 0)
     else:
         tool_note = "분석기 한계로 표시된 error는 이번 원본에 없습니다."
-    if plane_hits == 0 and copter_hits == 0:
-        lines.append(tool_note + " `ArduPlane/`, `ArduCopter/`에 Cppcheck 경고가 0건인 이유 중 하나입니다.")
+    all_zero, vehicle_note = vehicle_warning_note(composition, plane_hits, copter_hits)
+    if vehicle_note and all_zero:
+        lines.append(tool_note + " " + vehicle_note)
+    elif vehicle_note:
+        lines.append(tool_note)
+        lines.append(vehicle_note)
     else:
         lines.append(tool_note)
-        lines.append("`ArduPlane/` Cppcheck 경고 %d건, `ArduCopter/` Cppcheck 경고 %d건입니다." % (plane_hits, copter_hits))
     lines.append("")
     lines.append("## 분류 규칙")
     lines.append("")
