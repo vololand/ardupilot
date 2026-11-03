@@ -257,10 +257,36 @@ int lua_mission_receive(lua_State *L) {
 #endif // AP_MISSION_ENABLED
 
 #if HAL_LOGGING_ENABLED
+
+// Copy prefix and src into dest, including the terminating NUL.
+// Returns false when an input is missing or the result would not fit.
+static bool copy_prefixed_string(char *dest, size_t dest_size, const char *prefix, const char *src, size_t src_len)
+{
+    if (dest == nullptr || prefix == nullptr || src == nullptr || dest_size == 0U) {
+        return false;
+    } else {
+        const size_t prefix_len = strlen(prefix);
+        if (prefix_len >= dest_size || src_len > (dest_size - prefix_len - 1U)) {
+            return false;
+        } else {
+            memcpy(dest, prefix, prefix_len);
+            if (src_len > 0U) {
+                memcpy(&dest[prefix_len], src, src_len);
+            } else {
+                // Prefix only. The terminating NUL is written below.
+            }
+            dest[prefix_len + src_len] = '\0';
+            return true;
+        }
+    }
+}
+
 int AP_Logger_Write(lua_State *L) {
     AP_Logger * AP_logger = AP_Logger::get_singleton();
     if (AP_logger == nullptr) {
         return luaL_argerror(L, 1, "logger not supported on this firmware");
+    } else {
+        // Logger is available.
     }
 
     // Allow : and . access
@@ -279,23 +305,34 @@ int AP_Logger_Write(lua_State *L) {
     // cheack the name, labels and format are not too long
     if (strlen(name) >= LS_NAME_SIZE) {
         return luaL_error(L, "Name must be 4 or less chars long");
+    } else {
+        // Name fits in the log name field.
     }
-    uint8_t length = strlen(labels);
-    if (length >= (LS_LABELS_SIZE - 7)) { // need 7 chars to add 'TimeUS,'
+    // Measure the full length. A uint8_t would wrap at 256 and skip this check.
+    const size_t label_len = strlen(labels);
+    if (label_len >= static_cast<size_t>(LS_LABELS_SIZE - 7)) { // need 7 chars to add 'TimeUS,'
         return luaL_error(L, "labels must be less than 58 chars long");
+    } else {
+        // label_len fits with the TimeUS, prefix.
     }
     // Count the number of commas
     uint8_t commas = 1;
-    for (uint8_t i=0; i<length; i++) {
+    for (size_t i = 0; i < label_len; i++) {
         if (labels[i] == ',') {
             commas++;
+        } else {
+            continue;
         }
     }
 
-    length = strlen(fmt);
-    if (length >= (LS_FORMAT_SIZE - 1)) { // need 1 char to add timestamp
+    const size_t fmt_len = strlen(fmt);
+    if (fmt_len >= static_cast<size_t>(LS_FORMAT_SIZE - 1)) { // need 1 char to add timestamp
         return luaL_error(L, "format must be less than 15 chars long");
+    } else {
+        // fmt_len fits with the Q prefix.
     }
+    // fmt_len is at most 15 here, so the existing argument-count checks can keep using uint8_t.
+    const uint8_t length = static_cast<uint8_t>(fmt_len);
 
     // check the number of arguments matches the number of values in the label
     if (length != commas) {
@@ -313,18 +350,21 @@ int AP_Logger_Write(lua_State *L) {
 
     // prepend timestamp to format and labels
     char label_cat[LS_LABELS_SIZE];
-    strcpy(label_cat,"TimeUS,");
-    strcat(label_cat,labels);
     char fmt_cat[LS_FORMAT_SIZE];
-    strcpy(fmt_cat,"Q");
-    strcat(fmt_cat,fmt);
+    if (!copy_prefixed_string(label_cat, sizeof(label_cat), "TimeUS,", labels, label_len)) {
+        return luaL_error(L, "labels must be less than 58 chars long");
+    } else if (!copy_prefixed_string(fmt_cat, sizeof(fmt_cat), "Q", fmt, fmt_len)) {
+        return luaL_error(L, "format must be less than 15 chars long");
+    } else {
+        // Label and format strings fit in the log buffers.
+    }
 
     // Need to declare these here so they don't go out of scope
     char units_cat[LS_FORMAT_SIZE];
     char multipliers_cat[LS_FORMAT_SIZE];
 
     uint8_t field_start = 4;
-    struct AP_Logger::log_write_fmt *f;
+    struct AP_Logger::log_write_fmt *f = nullptr;
     if (!have_units) {
         // ask for a mesage type
         f = AP_logger->msg_fmt_for_name(name, label_cat, nullptr, nullptr, fmt_cat, true, true);
@@ -335,22 +375,20 @@ int AP_Logger_Write(lua_State *L) {
         const char * units = luaL_checkstring(L, 4 + arg_offset);
         const char * multipliers = luaL_checkstring(L, 5 + arg_offset);
 
-        if (length != strlen(units)) {
+        const size_t units_len = strlen(units);
+        const size_t multipliers_len = strlen(multipliers);
+        if (static_cast<size_t>(length) != units_len) {
             return luaL_error(L, "units must be same length as format");
-        }
-        if (length != strlen(multipliers)) {
+        } else if (static_cast<size_t>(length) != multipliers_len) {
             return luaL_error(L, "multipliers must be same length as format");
+        } else if (!copy_prefixed_string(units_cat, sizeof(units_cat), "s", units, units_len)) {
+            return luaL_error(L, "units must be same length as format");
+        } else if (!copy_prefixed_string(multipliers_cat, sizeof(multipliers_cat), "F", multipliers, multipliers_len)) {
+            return luaL_error(L, "multipliers must be same length as format");
+        } else {
+            // ask for a mesage type
+            f = AP_logger->msg_fmt_for_name(name, label_cat, units_cat, multipliers_cat, fmt_cat, true, true);
         }
-
-        // prepend timestamp to units and multiplyers
-        strcpy(units_cat,"s");
-        strcat(units_cat,units);
-
-        strcpy(multipliers_cat,"F");
-        strcat(multipliers_cat,multipliers);
-
-        // ask for a mesage type
-        f = AP_logger->msg_fmt_for_name(name, label_cat, units_cat, multipliers_cat, fmt_cat, true, true);
     }
 
     if (f == nullptr) {

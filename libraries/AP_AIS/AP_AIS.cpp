@@ -865,13 +865,17 @@ bool AP_AIS::decode_latest_term()
 
         // case 4, chanel, either A or B, discarded
 
-        case 5:
-            if (strlen(_term) == 0) {
+        case 5: {
+            const size_t term_len = strlen(_term);
+            if (term_len == 0U) {
+                _sentence_valid = false;
+            } else if (term_len >= sizeof(_incoming.payload)) {
                 _sentence_valid = false;
             } else {
-                strcpy(_incoming.payload,_term);
+                memcpy(_incoming.payload, _term, term_len + 1U);
             }
             break;
+        }
 
         //case 5, number of fill bits, discarded
     }

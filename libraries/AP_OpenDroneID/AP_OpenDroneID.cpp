@@ -33,6 +33,32 @@
 
 #include "AP_OpenDroneID.h"
 #include <AP_HAL/AP_HAL.h>
+#include <errno.h>
+#include <stdlib.h>
+
+namespace {
+
+// atoi without reporting overflow. A value that does not convert, or does not
+// fit in long, becomes 0. A converted number keeps the same value.
+long parse_long_or_zero(const char *text)
+{
+    if (text == nullptr) {
+        return 0;
+    } else {
+        errno = 0;
+        char *end = nullptr;
+        const long value = strtol(text, &end, 10);
+        if (end == text) {
+            return 0;
+        } else if (errno == ERANGE) {
+            return 0;
+        } else {
+            return value;
+        }
+    }
+}
+
+}
 #include <GCS_MAVLink/GCS.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_Baro/AP_Baro.h>
@@ -138,8 +164,8 @@ void AP_OpenDroneID::set_basic_id() {
         uint8_t val = gcs().sysid_this_mav();
         pkt_basic_id.target_system = val;
         pkt_basic_id.target_component = MAV_COMP_ID_ODID_TXRX_1;
-        pkt_basic_id.id_type = atoi(id_type);
-        pkt_basic_id.ua_type = atoi(ua_type);
+        pkt_basic_id.id_type = parse_long_or_zero(id_type);
+        pkt_basic_id.ua_type = parse_long_or_zero(ua_type);
         char buffer[21];
         snprintf(buffer, sizeof(buffer), "%s", id_str);
         memcpy(pkt_basic_id.uas_id, buffer, sizeof(pkt_basic_id.uas_id));

@@ -1,0 +1,2 @@
+NarinFC-H7-secure-coding-report_2026_11_03_10_46_12 : SecureCoding 작업 진행 전 처음 검사이후 작업 진행 중인 폴더.
+NarinFC-H7-secure-coding-report_2026_11_03_10_46_12_Init : SecureCoding 작업 진행 전 처음 검사 결과.

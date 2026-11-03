@@ -21,6 +21,32 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <ctype.h>
+#include <errno.h>
+#include <stdlib.h>
+
+namespace {
+
+// atoi without reporting overflow. A value that does not convert, or does not
+// fit in long, becomes 0. A converted number keeps the same value.
+long parse_long_or_zero(const char *text)
+{
+    if (text == nullptr) {
+        return 0;
+    } else {
+        errno = 0;
+        char *end = nullptr;
+        const long value = strtol(text, &end, 10);
+        if (end == text) {
+            return 0;
+        } else if (errno == ERANGE) {
+            return 0;
+        } else {
+            return value;
+        }
+    }
+}
+
+}
 
 #define MAXSONAR_SERIAL_LV_BAUD_RATE 9600
 
@@ -51,7 +77,7 @@ bool AP_RangeFinder_MaxsonarSerialLV::get_reading(float &reading_m)
         }
         if (c == '\r') {
             linebuf[linebuf_len] = 0;
-            sum += (int)atoi(linebuf);
+            sum += (int)parse_long_or_zero(linebuf);
             count++;
             linebuf_len = 0;
         } else if (isdigit(c)) {

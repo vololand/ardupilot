@@ -2,6 +2,32 @@
 
 #if HAL_MOUNT_VIEWPRO_ENABLED
 #include <AP_HAL/AP_HAL.h>
+#include <errno.h>
+#include <stdlib.h>
+
+namespace {
+
+// atoi without reporting overflow. A value that does not convert, or does not
+// fit in long, becomes 0. A converted number keeps the same value.
+long parse_long_or_zero(const char *text)
+{
+    if (text == nullptr) {
+        return 0;
+    } else {
+        errno = 0;
+        char *end = nullptr;
+        const long value = strtol(text, &end, 10);
+        if (end == text) {
+            return 0;
+        } else if (errno == ERANGE) {
+            return 0;
+        } else {
+            return value;
+        }
+    }
+}
+
+}
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_RTC/AP_RTC.h>
@@ -294,9 +320,9 @@ void AP_Mount_Viewpro::process_packet()
             const uint8_t fw_major_str[3] {_msg_buff[_msg_buff_data_start+4], _msg_buff[_msg_buff_data_start+5], 0x0};
             const uint8_t fw_minor_str[3] {_msg_buff[_msg_buff_data_start+6], _msg_buff[_msg_buff_data_start+7], 0x0};
             const uint8_t fw_patch_str[3] {_msg_buff[_msg_buff_data_start+8], _msg_buff[_msg_buff_data_start+9], 0x0};
-            const uint8_t major_ver = atoi((const char*)fw_major_str) & 0xFF;
-            const uint8_t minor_ver = atoi((const char*)fw_minor_str) & 0xFF;
-            const uint8_t patch_ver = atoi((const char*)fw_patch_str) & 0xFF;
+            const uint8_t major_ver = parse_long_or_zero((const char*)fw_major_str) & 0xFF;
+            const uint8_t minor_ver = parse_long_or_zero((const char*)fw_minor_str) & 0xFF;
+            const uint8_t patch_ver = parse_long_or_zero((const char*)fw_patch_str) & 0xFF;
             _firmware_version = (patch_ver << 16) | (minor_ver << 8) | major_ver;
             _got_firmware_version = true;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s fw:%u.%u.%u", send_text_prefix, (unsigned)major_ver, (unsigned)minor_ver, (unsigned)patch_ver);

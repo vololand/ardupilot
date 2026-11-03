@@ -17,7 +17,7 @@ enum AuthExitCode : uint8_t {
     AUTH_EXIT_NOT_FOUND     = 4,  // user not found
     AUTH_EXIT_EXISTS        = 5,  // reserved for the DB tool
     AUTH_EXIT_PW_MISMATCH   = 6,  // password response mismatch
-    AUTH_EXIT_CRYPTO_ERROR  = 7,  // reserved
+    AUTH_EXIT_CRYPTO_ERROR  = 7,  // hardware random source failed
 };
 
 class AP_GCS_Auth {
@@ -93,7 +93,9 @@ private:
 
     DbLookupStatus find_user_record(GCS_MAVLINK &link, const char user_id[USER_ID_LEN], AuthRecord &record) const;
     static void send_exit_code(GCS_MAVLINK &link, AuthExitCode code);
-    static void fill_random_bytes(uint8_t *buf, uint8_t len);
+    static void send_random_failure(GCS_MAVLINK &link);
+    // True when len bytes were taken from the hardware random source.
+    static bool fill_random_bytes(uint8_t *buf, uint8_t len);
     static void normalize_user_id(const char in[USER_ID_LEN], char out[USER_ID_LEN]);
     static bool is_login_msg(uint32_t msgid);
     static bool is_pre_auth_allowed_msg(uint32_t msgid);

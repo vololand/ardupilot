@@ -80,15 +80,24 @@ static int new_file_descriptor(const char *pathname)
                 errno = ENOMEM;
                 return -1;
             }
-            char *fname = (char *)malloc(strlen(pathname)+1);
-            if (fname == NULL) {
+            if (pathname == nullptr) {
                 free(fh);
                 free(stream);
-                errno = ENOMEM;
+                errno = EINVAL;
                 return -1;
+            } else {
+                const size_t pathname_len = strlen(pathname);
+                char *fname = (char *)malloc(pathname_len + 1U);
+                if (fname == nullptr) {
+                    free(fh);
+                    free(stream);
+                    errno = ENOMEM;
+                    return -1;
+                } else {
+                    memcpy(fname, pathname, pathname_len + 1U);
+                    stream->name = fname;
+                }
             }
-            strcpy(fname, pathname);
-            stream->name = fname;
 
             file_table[i]  = stream;
             stream->fh = fh;

@@ -2,6 +2,32 @@
 
 #if HAL_MOUNT_XACTI_ENABLED
 #include <AP_HAL/AP_HAL.h>
+#include <errno.h>
+#include <stdlib.h>
+
+namespace {
+
+// atoi without reporting overflow. A value that does not convert, or does not
+// fit in long, becomes 0. A converted number keeps the same value.
+long parse_long_or_zero(const char *text)
+{
+    if (text == nullptr) {
+        return 0;
+    } else {
+        errno = 0;
+        char *end = nullptr;
+        const long value = strtol(text, &end, 10);
+        if (end == text) {
+            return 0;
+        } else if (errno == ERANGE) {
+            return 0;
+        } else {
+            return value;
+        }
+    }
+}
+
+}
 #include <AP_AHRS/AP_AHRS.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_BoardConfig/AP_BoardConfig.h>
@@ -662,10 +688,10 @@ bool AP_Mount_Xacti::handle_param_get_set_response_string(AP_DroneCAN* ap_dronec
             const char minor_str[3] = {_firmware_version.str[2], _firmware_version.str[3], 0};
             const char patch_str[3] = {_firmware_version.str[4], _firmware_version.str[5], 0};
             const char dev_str[3] = {_firmware_version.str[7], _firmware_version.str[8], 0};
-            const uint8_t major_ver_num = atoi(major_str) & 0xFF;
-            const uint8_t minor_ver_num = atoi(minor_str) & 0xFF;
-            const uint8_t patch_ver_num = atoi(patch_str) & 0xFF;
-            const uint8_t dev_ver_num = atoi(dev_str) & 0xFF;
+            const uint8_t major_ver_num = parse_long_or_zero(major_str) & 0xFF;
+            const uint8_t minor_ver_num = parse_long_or_zero(minor_str) & 0xFF;
+            const uint8_t patch_ver_num = parse_long_or_zero(patch_str) & 0xFF;
+            const uint8_t dev_ver_num = parse_long_or_zero(dev_str) & 0xFF;
             _firmware_version.mav_ver = UINT32_VALUE(dev_ver_num, patch_ver_num, minor_ver_num, major_ver_num);
         }
         return false;

@@ -34,6 +34,7 @@
 #include <AP_Logger/AP_Logger.h>
 
 #include <ctype.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -41,6 +42,49 @@
 #include "AP_GPS_NMEA.h"
 
 #if AP_GPS_NMEA_ENABLED
+
+namespace {
+
+// atol/atof without reporting overflow. A value that does not convert, or does not
+// fit in the return type, becomes 0. A converted number keeps the same value.
+long parse_long_or_zero(const char *text)
+{
+    if (text == nullptr) {
+        return 0;
+    } else {
+        errno = 0;
+        char *end = nullptr;
+        const long value = strtol(text, &end, 10);
+        if (end == text) {
+            return 0;
+        } else if (errno == ERANGE) {
+            return 0;
+        } else {
+            return value;
+        }
+    }
+}
+
+double parse_double_or_zero(const char *text)
+{
+    if (text == nullptr) {
+        return 0.0;
+    } else {
+        errno = 0;
+        char *end = nullptr;
+        const double value = strtod(text, &end);
+        if (end == text) {
+            return 0.0;
+        } else if (errno == ERANGE) {
+            return 0.0;
+        } else {
+            return value;
+        }
+    }
+}
+
+}
+
 extern const AP_HAL::HAL& hal;
 
 #ifndef AP_GPS_NMEA_CONFIG_PERIOD_MS
@@ -585,7 +629,7 @@ bool AP_GPS_NMEA::_term_complete()
             }
             break;
         case _GPS_SENTENCE_GGA + 7: // satellite count (GGA)
-            _new_satellite_count = atol(_term);
+            _new_satellite_count = parse_long_or_zero(_term);
             break;
         case _GPS_SENTENCE_GGA + 8: // HDOP (GGA)
             _new_hdop = (uint16_t)_parse_decimal_100(_term);
@@ -598,7 +642,7 @@ bool AP_GPS_NMEA::_term_complete()
             _new_time = _parse_decimal_100(_term);
             break;
         case _GPS_SENTENCE_RMC + 9: // Date (GPRMC)
-            _new_date = atol(_term);
+            _new_date = parse_long_or_zero(_term);
             break;
 
         // location
@@ -643,19 +687,19 @@ bool AP_GPS_NMEA::_term_complete()
             break;
 
         case _GPS_SENTENCE_PHD + 1: // PHD class
-            _phd.msg_class = atol(_term);
+            _phd.msg_class = parse_long_or_zero(_term);
             break;
         case _GPS_SENTENCE_PHD + 2: // PHD message
-            _phd.msg_id = atol(_term);
+            _phd.msg_id = parse_long_or_zero(_term);
             break;
         case _GPS_SENTENCE_PHD + 5: // PHD message, itow
             _phd.itow = strtoul(_term, nullptr, 10);
             break;
         case _GPS_SENTENCE_PHD + 6 ... _GPS_SENTENCE_PHD + 11: // PHD message, fields
-            _phd.fields[_term_number-6] = atol(_term);
+            _phd.fields[_term_number-6] = parse_long_or_zero(_term);
             break;
         case _GPS_SENTENCE_KSXT + 1 ... _GPS_SENTENCE_KSXT + 22: // KSXT message, fields
-            _ksxt.fields[_term_number-1] = atof(_term);
+            _ksxt.fields[_term_number-1] = parse_double_or_zero(_term);
             break;
 #if AP_GPS_NMEA_UNICORE_ENABLED
         case _GPS_SENTENCE_AGRICA + 1 ... _GPS_SENTENCE_AGRICA + 65: // AGRICA message
@@ -698,38 +742,38 @@ void AP_GPS_NMEA::parse_agrica_field(uint16_t term_number, const char *term)
     //::printf("AGRICA[%u]=%s\n", unsigned(term_number), term);
     switch (term_number) {
     case 10:
-        ag.rtk_status = atol(term);
+        ag.rtk_status = parse_long_or_zero(term);
         break;
     case 11:
-        ag.heading_status = atol(term);
+        ag.heading_status = parse_long_or_zero(term);
         break;
     case 25 ... 26:
-        ag.vel_NED[term_number-25] = atof(term);
+        ag.vel_NED[term_number-25] = parse_double_or_zero(term);
         break;
     case 27:
         // AGRIC gives velocity up
-        ag.vel_NED.z = -atof(term);
+        ag.vel_NED.z = -parse_double_or_zero(term);
         break;
     case 28 ... 30:
-        ag.vel_stddev[term_number-28] = atof(term);
+        ag.vel_stddev[term_number-28] = parse_double_or_zero(term);
         break;
     case 31:
-        ag.lat = atof(term);
+        ag.lat = parse_double_or_zero(term);
         break;
     case 32:
-        ag.lng = atof(term);
+        ag.lng = parse_double_or_zero(term);
         break;
     case 33:
-        ag.alt = atof(term);
+        ag.alt = parse_double_or_zero(term);
         break;
     case 49:
-        ag.itow = atol(term);
+        ag.itow = parse_long_or_zero(term);
         break;
     case 37 ... 39:
-        ag.pos_stddev[term_number-37] = atof(term);
+        ag.pos_stddev[term_number-37] = parse_double_or_zero(term);
         break;
     case 52:
-        ag.undulation = atof(term);
+        ag.undulation = parse_double_or_zero(term);
         break;
     }
 }
@@ -754,16 +798,16 @@ void AP_GPS_NMEA::parse_uniheadinga_field(uint16_t term_number, const char *term
     auto &uh = _uniheadinga;
     switch (term_number) {
     case 4:
-        uh.baseline_length = atof(term);
+        uh.baseline_length = parse_double_or_zero(term);
         break;
     case 5:
-        uh.heading = atof(term);
+        uh.heading = parse_double_or_zero(term);
         break;
     case 6:
-        uh.pitch = atof(term);
+        uh.pitch = parse_double_or_zero(term);
         break;
     case 8:
-        uh.heading_sd = atof(term);
+        uh.heading_sd = parse_double_or_zero(term);
         break;
     }
 }

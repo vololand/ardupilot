@@ -54,13 +54,27 @@ typedef struct __attribute__((packed))
  */
 bool sgDecodeInstall(uint8_t *buffer, sg_install_t *stl)
 {
-   memset(&stl->reg[0], '\0', sizeof(stl->reg));  // Ensure registration is null-terminated
-
    stl_t sgStl;
-   memcpy(&sgStl, buffer, sizeof(stl_t));
+   size_t i;
+
+   if (buffer == NULL || stl == NULL) {
+      return false;
+   } else {
+      memset(&stl->reg[0], '\0', sizeof(stl->reg));  // Ensure registration is null-terminated
+      memcpy(&sgStl, buffer, sizeof(stl_t));
+   }
 
    stl->icao           = toIcao(sgStl.icao);
-   strcpy(stl->reg,      sgStl.registration);
+   i = 0;
+   while (i < SG_REG_LEN && sgStl.registration[i] != '\0') {
+      stl->reg[i] = sgStl.registration[i];
+      i++;
+   }
+   if (i < SG_REG_LEN) {
+      stl->reg[i] = '\0';
+   } else {
+      /* No NUL inside the 7-byte field. Index SG_REG_LEN stays zero. */
+   }
    memset(&stl->reg[SG_REG_LEN], 0, 1);  // Ensure registration is null-terminated
    stl->com0           = (sg_baud_t)(sgStl.com0);
    stl->com1           = (sg_baud_t)(sgStl.com1);

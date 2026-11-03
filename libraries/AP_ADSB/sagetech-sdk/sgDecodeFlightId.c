@@ -32,10 +32,23 @@ typedef struct __attribute__((packed))
 bool sgDecodeFlightId(uint8_t *buffer, sg_flightid_t *id)
 {
     flightid_t sgId;
-    memcpy(&sgId, buffer, sizeof(flightid_t));
+    size_t i;
 
-    strcpy(id->flightId, sgId.flightId);
-    memset(&id->flightId[SG_ID_LEN], '\0', 1); // Ensure flight id is null-terminated
-
-    return true;
+    if (buffer == NULL || id == NULL) {
+        return false;
+    } else {
+        memcpy(&sgId, buffer, sizeof(flightid_t));
+        i = 0;
+        while (i < SG_ID_LEN && sgId.flightId[i] != '\0') {
+            id->flightId[i] = sgId.flightId[i];
+            i++;
+        }
+        if (i < SG_ID_LEN) {
+            id->flightId[i] = '\0';
+        } else {
+            /* No NUL inside the 8-byte field. The terminator is written below. */
+        }
+        id->flightId[SG_ID_LEN] = '\0';
+        return true;
+    }
 }

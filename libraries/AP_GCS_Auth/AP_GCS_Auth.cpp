@@ -4,7 +4,6 @@
 
 #include <GCS_MAVLink/GCS.h>
 #include <AP_HAL/HAL.h>
-#include <AP_Math/AP_Math.h>
 #include <AP_Filesystem/AP_Filesystem.h>
 
 extern const AP_HAL::HAL &hal;
@@ -33,6 +32,8 @@ extern void mavlink_sha256_update(mavlink_sha256_ctx *m, const void *v, uint32_t
 namespace {
 constexpr uint8_t USER_ID_LEN = 32;
 constexpr uint32_t AUTH_TIMEOUT_MS = 10000;
+// One flight-loop budget. The H7 hardware generator is normally much faster.
+constexpr uint32_t RANDOM_TIMEOUT_US = 5000;
 constexpr uint8_t AUTH_MAX_RETRIES = 3;
 constexpr const char *AUTH_DB_PRIMARY = "/APM/auth.dat";
 constexpr const char *USB_NO_AUTH_PATH = "/APM/USB_NO_AUTH";
@@ -199,15 +200,30 @@ AP_GCS_Auth &AP_GCS_Auth::get_singleton()
     return *_singleton;
 }
 
-void AP_GCS_Auth::fill_random_bytes(uint8_t *buf, uint8_t len)
+bool AP_GCS_Auth::fill_random_bytes(uint8_t *buf, uint8_t len)
 {
-    for (uint8_t i = 0; i < len; i += 2) {
-        const uint16_t rnd = get_random16();
-        buf[i] = rnd & 0xFFU;
-        if (i + 1 < len) {
-            buf[i+1] = rnd >> 8;
-        }
+    if (buf == nullptr || len == 0U) {
+        return false;
+    } else if (hal.util == nullptr) {
+        memset(buf, 0, len);
+        return false;
+    } else if (!hal.util->get_true_random_vals(buf, len, RANDOM_TIMEOUT_US)) {
+        memset(buf, 0, len);
+        return false;
+    } else {
+        return true;
     }
+}
+
+void AP_GCS_Auth::send_random_failure(GCS_MAVLINK &link)
+{
+    mavlink_auth_result_t result {};
+    result.result = MAV_AUTH_RESULT_FAILED;
+    {
+        AuthLinkSend unsigned_send(link.get_chan());
+        mavlink_msg_auth_result_send_struct(link.get_chan(), &result);
+    }
+    send_exit_code(link, AUTH_EXIT_CRYPTO_ERROR);
 }
 
 void AP_GCS_Auth::normalize_user_id(const char in[USER_ID_LEN], char out[USER_ID_LEN])
@@ -555,13 +571,18 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
 
     auto &session = _sessions[link.get_chan()];
     if (pkt.request_type == MAV_AUTH_TYPE_LOGOUT) {
-        clear_channel_auth(link.get_chan());
         if (no_signature_file_present(true)) {
+            clear_channel_auth(link.get_chan());
             link.clear_signing_key();
         } else {
             uint8_t random_key[32] {};
-            fill_random_bytes(random_key, sizeof(random_key));
-            link.apply_signing_key(random_key, AP_HAL::micros64()/10ULL);
+            if (!fill_random_bytes(random_key, static_cast<uint8_t>(sizeof(random_key)))) {
+                send_random_failure(link);
+                return true;
+            } else {
+                clear_channel_auth(link.get_chan());
+                link.apply_signing_key(random_key, AP_HAL::micros64()/10ULL);
+            }
         }
         link.send_text(MAV_SEVERITY_INFO, "AUTH_link: logout accepted (ch=%u)", unsigned(link.get_chan()));
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AUTH_GCS: logout accepted (ch=%u)", unsigned(link.get_chan()));
@@ -605,6 +626,32 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
     AuthRecord rec {};
     const DbLookupStatus lookup = find_user_record(link, user_id, rec);
     const bool user_found = (lookup == DbLookupStatus::OK);
+
+    uint8_t challenge_bytes[CHALLENGE_LEN] {};
+    uint8_t unknown_pw_hash[PW_HASH_LEN] {};
+    uint8_t unknown_salt[USER_SALT_LEN] {};
+    bool random_ok = fill_random_bytes(challenge_bytes, CHALLENGE_LEN);
+    if (!user_found) {
+        if (!fill_random_bytes(unknown_pw_hash, PW_HASH_LEN)) {
+            random_ok = false;
+        } else if (!fill_random_bytes(unknown_salt, USER_SALT_LEN)) {
+            random_ok = false;
+        } else {
+            // Unknown-user hash and salt are ready.
+        }
+    } else {
+        // A known user uses the stored hash and salt.
+    }
+    if (!random_ok) {
+        memset(challenge_bytes, 0, sizeof(challenge_bytes));
+        memset(unknown_pw_hash, 0, sizeof(unknown_pw_hash));
+        memset(unknown_salt, 0, sizeof(unknown_salt));
+        send_random_failure(link);
+        return true;
+    } else {
+        // Random material is ready. The existing challenge path continues below.
+    }
+
     if (!user_found) {
         switch (lookup) {
         case DbLookupStatus::FILE_ERROR:
@@ -635,11 +682,11 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
     session.timestamp_ms = AP_HAL::millis();
     session.retries_left = AUTH_MAX_RETRIES;
     memcpy(session.user_id, user_id, USER_ID_LEN);
-    fill_random_bytes(session.challenge, CHALLENGE_LEN);
+    memcpy(session.challenge, challenge_bytes, CHALLENGE_LEN);
     if (user_found) {
         memcpy(session.expected_pw_hash, rec.pw_hash, PW_HASH_LEN);
     } else {
-        fill_random_bytes(session.expected_pw_hash, PW_HASH_LEN);
+        memcpy(session.expected_pw_hash, unknown_pw_hash, PW_HASH_LEN);
     }
 
     mavlink_auth_challenge_t challenge {};
@@ -647,7 +694,7 @@ bool AP_GCS_Auth::handle_auth_request(GCS_MAVLINK &link, const mavlink_auth_requ
     if (user_found) {
         memcpy(challenge.user_salt, rec.user_salt, USER_SALT_LEN);
     } else {
-        fill_random_bytes(challenge.user_salt, USER_SALT_LEN);
+        memcpy(challenge.user_salt, unknown_salt, USER_SALT_LEN);
     }
     challenge.timestamp = session.timestamp_ms;
     {

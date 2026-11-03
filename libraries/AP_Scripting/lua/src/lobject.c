@@ -281,9 +281,12 @@ static const char *l_str2d (const char *s, lua_Number *result) {
   if (endptr == NULL) {  /* failed? may be a different locale */
     char buff[L_MAXLENNUM + 1];
     const char *pdot = strchr(s, '.');
-    if (strlen(s) > L_MAXLENNUM || pdot == NULL)
+    size_t slen = strlen(s);
+    if (slen > L_MAXLENNUM || pdot == NULL) {
       return NULL;  /* string too long or no dot; fail */
-    strcpy(buff, s);  /* copy string to buffer */
+    } else {
+      memcpy(buff, s, slen + 1);  /* copy checked string to buffer */
+    }
     buff[pdot - s] = lua_getlocaledecpoint();  /* correct decimal point */
     endptr = l_str2dloc(buff, result, mode);  /* try again */
     if (endptr != NULL)

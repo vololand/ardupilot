@@ -20,6 +20,32 @@
 #if HAL_GCS_ENABLED
 
 #include "GCS.h"
+#include <errno.h>
+#include <stdlib.h>
+
+namespace {
+
+// atoi without reporting overflow. A value that does not convert, or does not
+// fit in long, becomes 0. A converted number keeps the same value.
+long parse_long_or_zero(const char *text)
+{
+    if (text == nullptr) {
+        return 0;
+    } else {
+        errno = 0;
+        char *end = nullptr;
+        const long value = strtol(text, &end, 10);
+        if (end == text) {
+            return 0;
+        } else if (errno == ERANGE) {
+            return 0;
+        } else {
+            return value;
+        }
+    }
+}
+
+}
 
 #include <AC_Fence/AC_Fence.h>
 #include <AP_Compass/AP_Compass.h>
@@ -6634,7 +6660,7 @@ void GCS_MAVLINK::get_intervals_from_filepath(const char *path, DefaultIntervals
         if (mavlink_id_str == nullptr || strlen(mavlink_id_str) == 0) {
             continue;
         }
-        const uint32_t mavlink_id = atoi(mavlink_id_str);
+        const uint32_t mavlink_id = parse_long_or_zero(mavlink_id_str);
 
         const ap_message msg_id = mavlink_id_to_ap_message_id(mavlink_id);
         if (msg_id == MSG_LAST) {
@@ -6645,7 +6671,7 @@ void GCS_MAVLINK::get_intervals_from_filepath(const char *path, DefaultIntervals
         if (interval_str == nullptr || strlen(interval_str) == 0) {
             continue;
         }
-        const uint16_t interval = atoi(interval_str);
+        const uint16_t interval = parse_long_or_zero(interval_str);
 
         intervals.set(msg_id, interval);
     }
