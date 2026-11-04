@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <stdint.h>
+#include <string.h>
 #include <AP_HAL/AP_HAL_Boards.h>
 #include <AP_HAL/AP_HAL_Macros.h>
 #include <AP_HAL/Semaphores.h>
@@ -143,7 +144,7 @@ public:
     bool set_size(uint32_t size) { return buffer->set_size(((size+1) * sizeof(T))); }
 
     // read len objects without advancing the read pointer
-    uint32_t peek(T *data, uint32_t len) { return buffer->peekbytes((uint8_t*)data, len * sizeof(T)) / sizeof(T); }
+    uint32_t peek(T *data, uint32_t len) { return buffer->peekbytes(object_bytes(data), len * sizeof(T)) / sizeof(T); }
 
     // Discards the buffer content, emptying it.
     // !!! Note ObjectBuffer_TS is a duplicate of this update, in both places !!!
@@ -176,7 +177,7 @@ public:
         if (buffer->space() < sizeof(T)) {
             return false;
         }
-        return buffer->write((uint8_t*)&object, sizeof(T)) == sizeof(T);
+        return buffer->write(object_bytes(&object), sizeof(T)) == sizeof(T);
     }
 
     // push N objects onto the back of the queue
@@ -185,7 +186,7 @@ public:
         if (buffer->space() < n*sizeof(T)) {
             return false;
         }
-        return buffer->write((uint8_t*)object, n*sizeof(T)) == n*sizeof(T);
+        return buffer->write(object_bytes(object), n*sizeof(T)) == n*sizeof(T);
     }
     
     /*
@@ -204,7 +205,7 @@ public:
         if (buffer->available() < sizeof(T)) {
             return false;
         }
-        return buffer->read((uint8_t*)&object, sizeof(T)) == sizeof(T);
+        return buffer->read(object_bytes(&object), sizeof(T)) == sizeof(T);
     }
 
 
@@ -237,7 +238,7 @@ public:
      */
     // !!! Note ObjectBuffer_TS is a duplicate of this update, in both places !!!
     bool peek(T &object) WARN_IF_UNUSED {
-        return buffer->peekbytes((uint8_t*)&object, sizeof(T)) == sizeof(T);
+        return buffer->peekbytes(object_bytes(&object), sizeof(T)) == sizeof(T);
     }
 
     /*
@@ -247,10 +248,7 @@ public:
     // !!! Note ObjectBuffer_TS is a duplicate of this, update in both places !!!
     const T *readptr(uint32_t &n) {
         uint32_t avail_bytes = 0;
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wcast-align"
-        const T *ret = (const T *)buffer->readptr(avail_bytes);
-        #pragma GCC diagnostic pop
+        const T *ret = objects_from_bytes(buffer->readptr(avail_bytes));
         if (!ret || avail_bytes < sizeof(T)) {
             return nullptr;
         }
@@ -268,10 +266,48 @@ public:
        be fetched by pop()) */
     // !!! Note ObjectBuffer_TS is a duplicate of this, update in both places !!!
     bool update(const T &object) {
-        return buffer->update((uint8_t*)&object, sizeof(T));
+        return buffer->update(object_bytes(&object), sizeof(T));
     }
 
 private:
+    // Same address as the object, viewed as bytes.
+    static uint8_t *object_bytes(T *object)
+    {
+        uint8_t *bytes = nullptr;
+        static_assert(sizeof(bytes) == sizeof(object), "pointer size mismatch");
+        if (object == nullptr) {
+            return nullptr;
+        } else {
+            memcpy(&bytes, &object, sizeof(bytes));
+            return bytes;
+        }
+    }
+
+    static const uint8_t *object_bytes(const T *object)
+    {
+        const uint8_t *bytes = nullptr;
+        static_assert(sizeof(bytes) == sizeof(object), "pointer size mismatch");
+        if (object == nullptr) {
+            return nullptr;
+        } else {
+            memcpy(&bytes, &object, sizeof(bytes));
+            return bytes;
+        }
+    }
+
+    // Same address as the byte range, viewed as objects.
+    static const T *objects_from_bytes(const uint8_t *bytes)
+    {
+        const T *objects = nullptr;
+        static_assert(sizeof(objects) == sizeof(bytes), "pointer size mismatch");
+        if (bytes == nullptr) {
+            return nullptr;
+        } else {
+            memcpy(&objects, &bytes, sizeof(objects));
+            return objects;
+        }
+    }
+
     ByteBuffer *buffer = nullptr;
     bool external_buf = true;
 };

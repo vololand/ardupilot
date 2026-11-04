@@ -85,8 +85,8 @@ void RTCM3_Parser::resync(void)
 // parse packet
 bool RTCM3_Parser::parse(void)
 {
-    const uint8_t *parity = &pkt[pkt_len+3];
-    uint32_t crc1 = (parity[0] << 16) | (parity[1] << 8) | parity[2];
+    const uint8_t *crc_bytes = &pkt[pkt_len+3];
+    uint32_t crc1 = (crc_bytes[0] << 16) | (crc_bytes[1] << 8) | crc_bytes[2];
     uint32_t crc2 = crc_crc24(pkt, pkt_len+3);
     if (crc1 != crc2) {
         resync();

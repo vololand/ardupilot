@@ -120,7 +120,7 @@ PID::reset_I()
 }
 
 void PID::reset() {
-    memset(&_pid_info, 0, sizeof(_pid_info));
+    _pid_info.zero();
     reset_I();
 }
 

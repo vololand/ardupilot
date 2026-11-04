@@ -149,7 +149,7 @@ private:
     uint8_t get_next_sector(uint8_t sector) const {return ((sector >= PROXIMITY_NUM_SECTORS-1) ? 0 : sector+1); }
 
     // get the prev sector which is CCW to the passed sector
-    uint8_t get_prev_sector(uint8_t sector) const {return ((sector <= 0) ? PROXIMITY_NUM_SECTORS-1 : sector-1); }
+    uint8_t get_prev_sector(uint8_t sector) const {return ((sector == 0) ? PROXIMITY_NUM_SECTORS-1 : sector-1); }
 
     // Converts obstacle_num passed from avoidance library into appropriate face of the boundary
     // Returns false if the face is invalid

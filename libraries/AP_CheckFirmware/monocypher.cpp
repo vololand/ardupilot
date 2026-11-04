@@ -2309,11 +2309,11 @@ void crypto_sign_public_key_custom_hash(u8       public_key[32],
     u8 a[64];
     hash->hash(a, secret_key, 32);
     trim_scalar(a);
-    ge A;
-    ge_scalarmult_base(&A, a);
-    ge_tobytes(public_key, &A);
+    ge public_point;
+    ge_scalarmult_base(&public_point, a);
+    ge_tobytes(public_key, &public_point);
     WIPE_BUFFER(a);
-    WIPE_CTX(&A);
+    WIPE_CTX(&public_point);
 }
 
 void crypto_sign_public_key(u8 public_key[32], const u8 secret_key[32])

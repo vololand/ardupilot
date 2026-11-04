@@ -220,7 +220,9 @@ public:
 
     // zero the matrix
     void        zero(void) {
-        memset((void*)this, 0, sizeof(*this));
+        a.zero();
+        b.zero();
+        c.zero();
     }
 
     // setup the identity matrix

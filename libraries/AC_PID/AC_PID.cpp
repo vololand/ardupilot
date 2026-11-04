@@ -122,7 +122,7 @@ AC_PID::AC_PID(float initial_p, float initial_i, float initial_d, float initial_
     // reset input filter to first value received
     _flags._reset_filter = true;
 
-    memset(&_pid_info, 0, sizeof(_pid_info));
+    _pid_info.zero();
 
     // slew limit scaler allows for plane to use degrees/sec slew
     // limit

@@ -72,8 +72,14 @@ void DigitalBiquadFilter<T>::compute_params(float sample_freq, float cutoff_freq
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 template <class T>
-LowPassFilter2p<T>::LowPassFilter2p() { 
-    memset(&_params, 0, sizeof(_params) ); 
+LowPassFilter2p<T>::LowPassFilter2p() {
+    _params.cutoff_freq = 0.0f;
+    _params.sample_freq = 0.0f;
+    _params.a1 = 0.0f;
+    _params.a2 = 0.0f;
+    _params.b0 = 0.0f;
+    _params.b1 = 0.0f;
+    _params.b2 = 0.0f;
 }
 
 // constructor
