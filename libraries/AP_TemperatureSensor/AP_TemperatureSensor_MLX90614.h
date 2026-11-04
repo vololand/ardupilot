@@ -19,6 +19,5 @@ private:
     void _timer(void);
 
     uint16_t read_data(uint8_t cmd);
-    uint16_t read_eeprom(uint8_t address) {return read_data(address | 0x20);};
 };
 #endif  // AP_TEMPERATURE_SENSOR_MLX90614_ENABLED

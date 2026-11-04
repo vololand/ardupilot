@@ -117,18 +117,6 @@ errout:
     return false;
 }
 
-void AP_Compass_LSM9DS1::_dump_registers()
-{
-    DEV_PRINTF("LSMDS1 registers\n");
-    for (uint8_t reg = LSM9DS1M_OFFSET_X_REG_L_M; reg <= LSM9DS1M_INT_THS_H_M; reg++) {
-        DEV_PRINTF("%02x:%02x ", (unsigned)reg, (unsigned)_register_read(reg));
-        if ((reg - (LSM9DS1M_OFFSET_X_REG_L_M-1)) % 16 == 0) {
-            DEV_PRINTF("\n");
-        }
-    }
-    DEV_PRINTF("\n");
-}
-
 void AP_Compass_LSM9DS1::_update(void)
 {
     struct sample_regs regs;

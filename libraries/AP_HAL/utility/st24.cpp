@@ -90,54 +90,6 @@ typedef struct {
 	uint8_t	channel[36];		///< channel data, 24 channels (12 bit numbers)
 } ChannelData24;
 
-/**
- * Telemetry packet
- *
- * This is outgoing to the ST24
- *
- * imuStatus:
- * 8 bit total
- * bits 0-2 for status
- * - value 0 is FAILED
- * - value 1 is INITIALIZING
- * - value 2 is RUNNING
- * - values 3 through 7 are reserved
- * bits 3-7 are status for sensors (0 or 1)
- * - mpu6050
- * - accelerometer
- * - primary gyro x
- * - primary gyro y
- * - primary gyro z
- *
- * pressCompassStatus
- * 8 bit total
- * bits 0-3 for compass status
- * - value 0 is FAILED
- * - value 1 is INITIALIZING
- * - value 2 is RUNNING
- * - value 3 - 15 are reserved
- * bits 4-7 for pressure status
- * - value 0 is FAILED
- * - value 1 is INITIALIZING
- * - value 2 is RUNNING
- * - value 3 - 15 are reserved
- *
- */
-typedef struct {
-	uint16_t t;			///< packet counter or clock
-	int32_t	lat;			///< latitude (degrees)	+/- 90 deg
-	int32_t	lon;			///< longitude (degrees)	+/- 180 deg
-	int32_t	alt;			///< 0.01m resolution, altitude (meters)
-	int16_t	vx, vy, vz; 		///< velocity 0.01m res, +/-320.00 North-East- Down
-	uint8_t	nsat;			///<number of satellites
-	uint8_t	voltage; 		///< 25.4V	voltage = 5 + 255*0.1 = 30.5V, min=5V
-	uint8_t	current; 		///< 0.5A resolution
-	int16_t	roll, pitch, yaw;	///< 0.01 degree resolution
-	uint8_t	motorStatus;		///< 1 bit per motor for status 1=good, 0= fail
-	uint8_t	imuStatus;		///< inertial measurement unit status
-	uint8_t	pressCompassStatus;	///< baro / compass status
-} TelemetryData;
-
 #pragma pack(pop)
 
 enum ST24_DECODE_STATE {

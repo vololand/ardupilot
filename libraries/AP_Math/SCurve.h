@@ -109,9 +109,6 @@ private:
     float get_speed_along_track() const WARN_IF_UNUSED { return vel_max; }
 
     // get desired maximum acceleration along track
-    float get_accel_along_track() const WARN_IF_UNUSED { return accel_max; }
-
-    // get desired maximum acceleration along track
     float get_accel_z_max() const WARN_IF_UNUSED { return accel_z_max; }
 
     // return the change in position from origin to destination
@@ -125,12 +122,6 @@ private:
 
     // time left before sequence will complete
     float get_time_remaining() const WARN_IF_UNUSED;
-
-    // time when acceleration section of the sequence will complete
-    float get_accel_finished_time() const WARN_IF_UNUSED;
-
-    // return true if the sequence is braking to a stop
-    bool braking() const WARN_IF_UNUSED;
 
     // return time offset used to initiate the turn onto leg
     float time_accel_end() const WARN_IF_UNUSED;

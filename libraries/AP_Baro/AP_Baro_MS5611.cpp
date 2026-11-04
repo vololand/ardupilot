@@ -348,11 +348,12 @@ void AP_Baro_MS56XX::update()
         memset(&_accum, 0, sizeof(_accum));
     }
 
-    if (d1count != 0) {
-        _D1 = ((float)sD1) / d1count;
-    }
+    /* d1_count was already rejected when it was zero, so d1count is non-zero. */
+    _D1 = ((float)sD1) / d1count;
     if (d2count != 0) {
         _D2 = ((float)sD2) / d2count;
+    } else {
+        /* No D2 samples in this accumulation. Keep the previous _D2. */
     }
 
     switch (_ms56xx_type) {

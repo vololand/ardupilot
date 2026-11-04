@@ -36,7 +36,6 @@ private:
     void _register_write(uint8_t reg, uint8_t val);
     void _register_modify(uint8_t reg, uint8_t clearbits, uint8_t setbits);
     bool _block_read(uint8_t reg, uint8_t *buf, uint32_t size);
-    void _dump_registers();
 
     AP_HAL::OwnPtr<AP_HAL::Device> _dev;
     uint8_t _compass_instance;

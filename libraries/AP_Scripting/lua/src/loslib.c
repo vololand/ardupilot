@@ -177,13 +177,20 @@ static int os_rename (lua_State *L) {
 
 
 static int os_tmpname (lua_State *L) {
+#if defined(ARDUPILOT_BUILD)
+  /* lua_tmpnam always reports failure in this firmware. */
+  return luaL_error(L, "unable to generate a unique filename");
+#else
   char buff[LUA_TMPNAMBUFSIZE];
   int err;
   lua_tmpnam(buff, err);
-  if (err)
+  if (err) {
     return luaL_error(L, "unable to generate a unique filename");
-  lua_pushstring(L, buff);
-  return 1;
+  } else {
+    lua_pushstring(L, buff);
+    return 1;
+  }
+#endif
 }
 
 

@@ -502,7 +502,7 @@ int decodeECU_TelemetrySlow0PacketStructure(const void* _pg_pkt, ECU_TelemetrySl
 
     // Cylinder head temperature in Celsius
     // Range of cht is -10.0f to 245.0f.
-    _pg_user->cht = float32ScaledFrom1UnsignedBytes(_pg_data, &_pg_byteindex, -10.0f, 1.0f/1.0f);
+    _pg_user->cht = float32ScaledFrom1UnsignedBytes(_pg_data, &_pg_byteindex, -10.0f, 1.0f);
 
     // Low part of RPM command from 0 to 49
     _pg_byteindex += 1;
@@ -591,7 +591,7 @@ int decodeECU_TelemetrySlow1PacketStructure(const void* _pg_pkt, ECU_TelemetrySl
 
     // Inlet air temperature in Celsius
     // Range of mat is -127.0f to 127.0f.
-    _pg_user->mat = float32ScaledFrom1SignedBytes(_pg_data, &_pg_byteindex, 1.0f/1.0f);
+    _pg_user->mat = float32ScaledFrom1SignedBytes(_pg_data, &_pg_byteindex, 1.0f);
 
     // Fuel pressure in kilo-Pascals
     // Range of fuelPressure is 0.0f to 1310.7f.
@@ -682,7 +682,7 @@ int decodeECU_TelemetrySlow2PacketStructure(const void* _pg_pkt, ECU_TelemetrySl
 
     // CPU load in percent
     // Range of cpuLoad is 0.0f to 255.0f.
-    _pg_user->cpuLoad = float32ScaledFrom1UnsignedBytes(_pg_data, &_pg_byteindex, 0.0f, 1.0f/1.0f);
+    _pg_user->cpuLoad = float32ScaledFrom1UnsignedBytes(_pg_data, &_pg_byteindex, 0.0f, 1.0f);
 
     // Charge temperature in Celsius
     // Range of chargeTemp is -128.0f to 254.5f.

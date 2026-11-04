@@ -1733,7 +1733,7 @@ int decodeESC_StatusCPacketStructure(const void* _pg_pkt, ESC_StatusC_t* _pg_use
 
     // ESC Phase Board Temperature
     // Range of fetTemperature is -50.0f to 205.0f.
-    _pg_user->fetTemperature = float32ScaledFrom1UnsignedBytes(_pg_data, &_pg_byteindex, -50.0f, 1.0f/1.0f);
+    _pg_user->fetTemperature = float32ScaledFrom1UnsignedBytes(_pg_data, &_pg_byteindex, -50.0f, 1.0f);
 
     // Current motor PWM frequency (10 Hz per bit)
     // Range of pwmFrequency is 0 to 65535.
@@ -1815,7 +1815,7 @@ int decodeESC_StatusCPacket(const void* _pg_pkt, float* fetTemperature, uint16_t
 
     // ESC Phase Board Temperature
     // Range of fetTemperature is -50.0f to 205.0f.
-    (*fetTemperature) = float32ScaledFrom1UnsignedBytes(_pg_data, &_pg_byteindex, -50.0f, 1.0f/1.0f);
+    (*fetTemperature) = float32ScaledFrom1UnsignedBytes(_pg_data, &_pg_byteindex, -50.0f, 1.0f);
 
     // Current motor PWM frequency (10 Hz per bit)
     // Range of pwmFrequency is 0 to 65535.
@@ -2005,16 +2005,15 @@ void encodeESC_WarningErrorStatusPacket(void* _pg_pkt, const ESC_WarningBits_t* 
     // Range of extended is 0 to 255.
     uint8ToBytes(extended, _pg_data, &_pg_byteindex);
 
-    // Extension of ESC warning bitfield
+    // Extension of ESC warning and error bitfields
     if(extended)
     {
         encodeESC_ExtendedWarningBits_t(_pg_data, &_pg_byteindex, warningsExtended);
-    }
-
-    // Extension of ESC error bifield
-    if(extended)
-    {
         encodeESC_ExtendedErrorBits_t(_pg_data, &_pg_byteindex, errorsExtended);
+    }
+    else
+    {
+        /* No extended warning or error fields. */
     }
 
     // complete the process of creating the packet
@@ -2067,18 +2066,25 @@ int decodeESC_WarningErrorStatusPacket(const void* _pg_pkt, ESC_WarningBits_t* w
     // Range of extended is 0 to 255.
     (*extended) = uint8FromBytes(_pg_data, &_pg_byteindex);
 
-    // Extension of ESC warning bitfield
+    // Extension of ESC warning and error bitfields
     if((*extended))
     {
         if(decodeESC_ExtendedWarningBits_t(_pg_data, &_pg_byteindex, warningsExtended) == 0)
+        {
             return 0;
+        }
+        else if(decodeESC_ExtendedErrorBits_t(_pg_data, &_pg_byteindex, errorsExtended) == 0)
+        {
+            return 0;
+        }
+        else
+        {
+            /* Both extended fields were decoded. */
+        }
     }
-
-    // Extension of ESC error bifield
-    if((*extended))
+    else
     {
-        if(decodeESC_ExtendedErrorBits_t(_pg_data, &_pg_byteindex, errorsExtended) == 0)
-            return 0;
+        /* No extended fields in this packet. */
     }
 
     return 1;

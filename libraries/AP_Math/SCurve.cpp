@@ -586,24 +586,6 @@ float SCurve::get_time_remaining() const
     return segment[SEG_DECEL_END].end_time - time;
 }
 
-// time when acceleration section of the sequence will complete
-float SCurve::get_accel_finished_time() const
-{
-    if (num_segs != segments_max) {
-        return 0.0;
-    }
-    return segment[SEG_ACCEL_END].end_time;
-}
-
-// return true if the sequence is braking to a stop
-bool SCurve::braking() const
-{
-    if (num_segs != segments_max) {
-        return true;
-    }
-    return time >= segment[SEG_CONST].end_time;
-}
-
 // return time offset for the start of the constant speed section and end of the acceleration section
 // used to initiate the turn onto leg
 float SCurve::time_accel_end() const
